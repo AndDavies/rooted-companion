@@ -20,9 +20,11 @@ export default function LandingPage() {
           <Link href="/retreats" className="text-sm text-neutral-600 hover:text-neutral-900 transition-colors">
             Retreats
           </Link>
-          <Button variant="outline" size="sm">
-            Log in
-          </Button>
+          <Link href="/login">
+            <Button variant="outline" size="sm">
+              Log in
+            </Button>
+          </Link>
         </nav>
       </header>
 
@@ -41,9 +43,11 @@ export default function LandingPage() {
                 A digital recovery companion blending wearable insights, breathwork, and personalized coaching.
               </p>
               <div className="flex flex-col sm:flex-row gap-4">
-                <Button size="lg" className="px-8 py-3 text-base">
-                  Start Your Reset
-                </Button>
+                <Link href="/signup">
+                  <Button size="lg" className="px-8 py-3 text-base">
+                    Start Your Reset
+                  </Button>
+                </Link>
                 <Button variant="outline" size="lg" className="px-8 py-3 text-base">
                   Learn More
                 </Button>
@@ -87,7 +91,7 @@ export default function LandingPage() {
               </CardHeader>
               <CardContent className="text-center">
                 <CardDescription className="text-neutral-600">
-                  Integrates with your Garmin to personalize recovery strategies based on your body's signals.
+                  Integrates with your Garmin to personalize recovery strategies based on your body&apos;s signals.
                 </CardDescription>
               </CardContent>
             </Card>
@@ -134,9 +138,11 @@ export default function LandingPage() {
               Join thousands who have transformed their recovery journey with ROOTED Way Companion.
             </p>
             <div className="flex flex-col sm:flex-row gap-4 justify-center">
-              <Button size="lg" className="px-8 py-3 text-base">
-                Start Free Trial
-              </Button>
+              <Link href="/signup">
+                <Button size="lg" className="px-8 py-3 text-base">
+                  Start Free Trial
+                </Button>
+              </Link>
               <Button variant="outline" size="lg" className="px-8 py-3 text-base">
                 Schedule Demo
               </Button>
