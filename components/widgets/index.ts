@@ -1,4 +1,5 @@
 export { default as AccountDetailsWidget } from './AccountDetailsWidget'
 export { default as BiometricSyncWidget } from './BiometricSyncWidget'
 export { default as RecoveryStatsWidget } from './RecoveryStatsWidget'
-export { default as QuickActionsWidget } from './QuickActionsWidget' 
+export { default as QuickActionsWidget } from './QuickActionsWidget'
+export { DailyPulseWidget } from './DailyPulseWidget' 

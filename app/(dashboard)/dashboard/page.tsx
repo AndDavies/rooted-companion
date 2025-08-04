@@ -3,7 +3,8 @@ import {
   AccountDetailsWidget, 
   BiometricSyncWidget, 
   RecoveryStatsWidget, 
-  QuickActionsWidget 
+  QuickActionsWidget,
+  DailyPulseWidget 
 } from '@/components/widgets'
 
 export default async function DashboardPage() {
@@ -27,6 +28,11 @@ export default async function DashboardPage() {
         <p className="text-neutral-600">
           Track your progress and stay connected to your wellness goals.
         </p>
+      </div>
+
+      {/* Daily Pulse - Featured Section */}
+      <div className="max-w-2xl mx-auto">
+        <DailyPulseWidget />
       </div>
 
       {/* User Info Cards */}

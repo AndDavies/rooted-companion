@@ -7,6 +7,11 @@ export type Json =
   | Json[]
 
 export type Database = {
+  // Allows to automatically instanciate createClient with right options
+  // instead of createClient<Database, { PostgrestVersion: 'XX' }>(URL, KEY)
+  __InternalSupabase: {
+    PostgrestVersion: "12.2.3 (519615d)"
+  }
   public: {
     Tables: {
       biometrics: {
@@ -30,6 +35,42 @@ export type Database = {
           id?: string
           source?: string | null
           user_id?: string | null
+        }
+        Relationships: []
+      }
+      burnout_selfcheck_logs: {
+        Row: {
+          connection_id: string
+          energy: number | null
+          id: string
+          irritability: number | null
+          mood: number | null
+          motivation: number | null
+          notes: string | null
+          sleep_quality: number | null
+          timestamp: string | null
+        }
+        Insert: {
+          connection_id: string
+          energy?: number | null
+          id?: string
+          irritability?: number | null
+          mood?: number | null
+          motivation?: number | null
+          notes?: string | null
+          sleep_quality?: number | null
+          timestamp?: string | null
+        }
+        Update: {
+          connection_id?: string
+          energy?: number | null
+          id?: string
+          irritability?: number | null
+          mood?: number | null
+          motivation?: number | null
+          notes?: string | null
+          sleep_quality?: number | null
+          timestamp?: string | null
         }
         Relationships: []
       }
@@ -151,7 +192,7 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "communities"
             referencedColumns: ["id"]
-          }
+          },
         ]
       }
       content: {
@@ -189,7 +230,7 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "communities"
             referencedColumns: ["id"]
-          }
+          },
         ]
       }
       event_attendees: {
@@ -218,7 +259,7 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "events"
             referencedColumns: ["id"]
-          }
+          },
         ]
       }
       event_registrations: {
@@ -369,6 +410,41 @@ export type Database = {
         }
         Relationships: []
       }
+      mood_reflections: {
+        Row: {
+          created_at: string | null
+          id: string
+          mood_emoji: string | null
+          mood_text: string | null
+          suggestion_id: string | null
+          user_id: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          id?: string
+          mood_emoji?: string | null
+          mood_text?: string | null
+          suggestion_id?: string | null
+          user_id?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          id?: string
+          mood_emoji?: string | null
+          mood_text?: string | null
+          suggestion_id?: string | null
+          user_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "mood_reflections_suggestion_id_fkey"
+            columns: ["suggestion_id"]
+            isOneToOne: false
+            referencedRelation: "suggestion_logs"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       oauth_pkce_states: {
         Row: {
           code_verifier: string
@@ -428,7 +504,7 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "spaces"
             referencedColumns: ["id"]
-          }
+          },
         ]
       }
       spaces: {
@@ -460,8 +536,89 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "communities"
             referencedColumns: ["id"]
-          }
+          },
         ]
+      }
+      studies_inventory: {
+        Row: {
+          authors: string[] | null
+          doi: string | null
+          error_message: string | null
+          filename: string
+          id: string
+          integrated_at: string | null
+          pdf_url: string | null
+          publication_date: string | null
+          status: string
+          tags: string[] | null
+          title: string | null
+          uploaded_at: string
+          vector_store_count: number | null
+        }
+        Insert: {
+          authors?: string[] | null
+          doi?: string | null
+          error_message?: string | null
+          filename: string
+          id?: string
+          integrated_at?: string | null
+          pdf_url?: string | null
+          publication_date?: string | null
+          status?: string
+          tags?: string[] | null
+          title?: string | null
+          uploaded_at?: string
+          vector_store_count?: number | null
+        }
+        Update: {
+          authors?: string[] | null
+          doi?: string | null
+          error_message?: string | null
+          filename?: string
+          id?: string
+          integrated_at?: string | null
+          pdf_url?: string | null
+          publication_date?: string | null
+          status?: string
+          tags?: string[] | null
+          title?: string | null
+          uploaded_at?: string
+          vector_store_count?: number | null
+        }
+        Relationships: []
+      }
+      suggestion_logs: {
+        Row: {
+          completed: boolean | null
+          created_at: string | null
+          id: string
+          recovery_score: number | null
+          subjective_input: Json | null
+          suggestion: Json | null
+          user_id: string | null
+          wearable_data: Json | null
+        }
+        Insert: {
+          completed?: boolean | null
+          created_at?: string | null
+          id?: string
+          recovery_score?: number | null
+          subjective_input?: Json | null
+          suggestion?: Json | null
+          user_id?: string | null
+          wearable_data?: Json | null
+        }
+        Update: {
+          completed?: boolean | null
+          created_at?: string | null
+          id?: string
+          recovery_score?: number | null
+          subjective_input?: Json | null
+          suggestion?: Json | null
+          user_id?: string | null
+          wearable_data?: Json | null
+        }
+        Relationships: []
       }
       user_vector_context: {
         Row: {
@@ -666,6 +823,41 @@ export type Database = {
         }
         Relationships: []
       }
+      wellness_embeddings: {
+        Row: {
+          content: string
+          created_at: string | null
+          embedding: string | null
+          id: string
+          metadata: Json | null
+          study_id: string | null
+        }
+        Insert: {
+          content: string
+          created_at?: string | null
+          embedding?: string | null
+          id?: string
+          metadata?: Json | null
+          study_id?: string | null
+        }
+        Update: {
+          content?: string
+          created_at?: string | null
+          embedding?: string | null
+          id?: string
+          metadata?: Json | null
+          study_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "fk_wellness_embeddings_study"
+            columns: ["study_id"]
+            isOneToOne: false
+            referencedRelation: "studies_inventory"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
     }
     Views: {
       [_ in never]: never
@@ -684,6 +876,26 @@ export type Database = {
         Args: { p_uid: string }
         Returns: boolean
       }
+      match_documents: {
+        Args: { query_embedding: string; match_count?: number; filter?: Json }
+        Returns: {
+          id: string
+          content: string
+          metadata: Json
+          embedding: string
+          created_at: string
+          distance: number
+        }[]
+      }
+      match_documents_edge: {
+        Args: { query_embedding: string; match_count?: number; filter?: Json }
+        Returns: {
+          id: string
+          content: string
+          metadata: Json
+          distance: number
+        }[]
+      }
     }
     Enums: {
       event_access: "public" | "private" | "premium"
@@ -697,21 +909,25 @@ export type Database = {
   }
 }
 
-type DefaultSchema = Database[Extract<keyof Database, "public">]
+type DatabaseWithoutInternals = Omit<Database, "__InternalSupabase">
+
+type DefaultSchema = DatabaseWithoutInternals[Extract<keyof Database, "public">]
 
 export type Tables<
   DefaultSchemaTableNameOrOptions extends
     | keyof (DefaultSchema["Tables"] & DefaultSchema["Views"])
-    | { schema: keyof Database },
+    | { schema: keyof DatabaseWithoutInternals },
   TableName extends DefaultSchemaTableNameOrOptions extends {
-    schema: keyof Database
+    schema: keyof DatabaseWithoutInternals
   }
-    ? keyof (Database[DefaultSchemaTableNameOrOptions["schema"]]["Tables"] &
-        Database[DefaultSchemaTableNameOrOptions["schema"]]["Views"])
+    ? keyof (DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Tables"] &
+        DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Views"])
     : never = never,
-> = DefaultSchemaTableNameOrOptions extends { schema: keyof Database }
-  ? (Database[DefaultSchemaTableNameOrOptions["schema"]]["Tables"] &
-      Database[DefaultSchemaTableNameOrOptions["schema"]]["Views"])[TableName] extends {
+> = DefaultSchemaTableNameOrOptions extends {
+  schema: keyof DatabaseWithoutInternals
+}
+  ? (DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Tables"] &
+      DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Views"])[TableName] extends {
       Row: infer R
     }
     ? R
@@ -729,14 +945,16 @@ export type Tables<
 export type TablesInsert<
   DefaultSchemaTableNameOrOptions extends
     | keyof DefaultSchema["Tables"]
-    | { schema: keyof Database },
+    | { schema: keyof DatabaseWithoutInternals },
   TableName extends DefaultSchemaTableNameOrOptions extends {
-    schema: keyof Database
+    schema: keyof DatabaseWithoutInternals
   }
-    ? keyof Database[DefaultSchemaTableNameOrOptions["schema"]]["Tables"]
+    ? keyof DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Tables"]
     : never = never,
-> = DefaultSchemaTableNameOrOptions extends { schema: keyof Database }
-  ? Database[DefaultSchemaTableNameOrOptions["schema"]]["Tables"][TableName] extends {
+> = DefaultSchemaTableNameOrOptions extends {
+  schema: keyof DatabaseWithoutInternals
+}
+  ? DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Tables"][TableName] extends {
       Insert: infer I
     }
     ? I
@@ -752,14 +970,16 @@ export type TablesInsert<
 export type TablesUpdate<
   DefaultSchemaTableNameOrOptions extends
     | keyof DefaultSchema["Tables"]
-    | { schema: keyof Database },
+    | { schema: keyof DatabaseWithoutInternals },
   TableName extends DefaultSchemaTableNameOrOptions extends {
-    schema: keyof Database
+    schema: keyof DatabaseWithoutInternals
   }
-    ? keyof Database[DefaultSchemaTableNameOrOptions["schema"]]["Tables"]
+    ? keyof DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Tables"]
     : never = never,
-> = DefaultSchemaTableNameOrOptions extends { schema: keyof Database }
-  ? Database[DefaultSchemaTableNameOrOptions["schema"]]["Tables"][TableName] extends {
+> = DefaultSchemaTableNameOrOptions extends {
+  schema: keyof DatabaseWithoutInternals
+}
+  ? DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Tables"][TableName] extends {
       Update: infer U
     }
     ? U
@@ -775,14 +995,16 @@ export type TablesUpdate<
 export type Enums<
   DefaultSchemaEnumNameOrOptions extends
     | keyof DefaultSchema["Enums"]
-    | { schema: keyof Database },
+    | { schema: keyof DatabaseWithoutInternals },
   EnumName extends DefaultSchemaEnumNameOrOptions extends {
-    schema: keyof Database
+    schema: keyof DatabaseWithoutInternals
   }
-    ? keyof Database[DefaultSchemaEnumNameOrOptions["schema"]]["Enums"]
+    ? keyof DatabaseWithoutInternals[DefaultSchemaEnumNameOrOptions["schema"]]["Enums"]
     : never = never,
-> = DefaultSchemaEnumNameOrOptions extends { schema: keyof Database }
-  ? Database[DefaultSchemaEnumNameOrOptions["schema"]]["Enums"][EnumName]
+> = DefaultSchemaEnumNameOrOptions extends {
+  schema: keyof DatabaseWithoutInternals
+}
+  ? DatabaseWithoutInternals[DefaultSchemaEnumNameOrOptions["schema"]]["Enums"][EnumName]
   : DefaultSchemaEnumNameOrOptions extends keyof DefaultSchema["Enums"]
     ? DefaultSchema["Enums"][DefaultSchemaEnumNameOrOptions]
     : never
@@ -790,14 +1012,16 @@ export type Enums<
 export type CompositeTypes<
   PublicCompositeTypeNameOrOptions extends
     | keyof DefaultSchema["CompositeTypes"]
-    | { schema: keyof Database },
+    | { schema: keyof DatabaseWithoutInternals },
   CompositeTypeName extends PublicCompositeTypeNameOrOptions extends {
-    schema: keyof Database
+    schema: keyof DatabaseWithoutInternals
   }
-    ? keyof Database[PublicCompositeTypeNameOrOptions["schema"]]["CompositeTypes"]
+    ? keyof DatabaseWithoutInternals[PublicCompositeTypeNameOrOptions["schema"]]["CompositeTypes"]
     : never = never,
-> = PublicCompositeTypeNameOrOptions extends { schema: keyof Database }
-  ? Database[PublicCompositeTypeNameOrOptions["schema"]]["CompositeTypes"][CompositeTypeName]
+> = PublicCompositeTypeNameOrOptions extends {
+  schema: keyof DatabaseWithoutInternals
+}
+  ? DatabaseWithoutInternals[PublicCompositeTypeNameOrOptions["schema"]]["CompositeTypes"][CompositeTypeName]
   : PublicCompositeTypeNameOrOptions extends keyof DefaultSchema["CompositeTypes"]
     ? DefaultSchema["CompositeTypes"][PublicCompositeTypeNameOrOptions]
     : never

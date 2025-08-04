@@ -9,11 +9,14 @@
     "lint": "next lint"
   },
   "dependencies": {
+    "@langchain/core": "^0.3.66",
+    "@langchain/openai": "^0.6.3",
     "@radix-ui/react-slot": "^1.2.3",
     "@supabase/ssr": "^0.6.1",
     "@supabase/supabase-js": "^2.53.0",
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",
+    "langchain": "^0.3.30",
     "lucide-react": "^0.536.0",
     "next": "14.2.31",
     "react": "^18",
