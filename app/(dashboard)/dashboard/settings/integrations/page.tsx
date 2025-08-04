@@ -83,10 +83,6 @@ export default async function IntegrationsPage({
                 width={20}
                 height={20}
                 className="w-5 h-5 object-contain"
-                onError={() => {
-                  // Fallback to Watch icon if logo fails to load
-                  // This will be handled by the hidden Watch icon
-                }}
               />
               <Watch className="w-5 h-5 text-white hidden" />
             </div>
