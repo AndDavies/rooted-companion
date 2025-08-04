@@ -14,7 +14,7 @@ export default function SettingsPage() {
     <div className="space-y-8">
       {/* Page Header */}
       <div>
-        <h1 className="text-3xl font-serif font-bold text-neutral-900 mb-2">
+        <h1 className="text-2xl sm:text-3xl font-logo font-bold text-neutral-900 mb-2">
           Settings
         </h1>
         <p className="text-neutral-600">
@@ -23,7 +23,7 @@ export default function SettingsPage() {
       </div>
 
       {/* Settings Categories */}
-      <div className="grid gap-6 md:grid-cols-2">
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4 sm:gap-6">
         {/* Device Integrations */}
         <Card className="border-neutral-200 hover:shadow-md transition-all duration-200">
           <CardHeader>

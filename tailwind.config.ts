@@ -10,8 +10,9 @@ const config: Config = {
   theme: {
     extend: {
       fontFamily: {
-        sans: ['var(--font-geist-sans)', 'system-ui', 'sans-serif'],
-        serif: ['Georgia', 'serif'],
+        sans: ['var(--font-josefin-sans)', 'system-ui', 'sans-serif'],
+        serif: ['var(--font-cinzel)', 'Georgia', 'serif'],
+        logo: ['var(--font-cinzel)', 'Georgia', 'serif'],
       },
       colors: {
         // shadcn/ui color system
@@ -127,7 +128,7 @@ const config: Config = {
         
         // Typography utilities
         '.text-heading': {
-          fontFamily: theme('fontFamily.serif'),
+          fontFamily: theme('fontFamily.logo'),
           fontWeight: '700',
           lineHeight: '1.2',
         },

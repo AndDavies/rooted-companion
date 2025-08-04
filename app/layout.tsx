@@ -2,15 +2,28 @@ import type { Metadata } from "next";
 import localFont from "next/font/local";
 import "./globals.css";
 
-const geistSans = localFont({
-  src: "./fonts/GeistVF.woff",
-  variable: "--font-geist-sans",
-  weight: "100 900",
+const josefinSans = localFont({
+  src: [
+    {
+      path: "../public/fonts/Josefin_Sans/JosefinSans-VariableFont_wght.ttf",
+      weight: "100 700",
+      style: "normal",
+    },
+    {
+      path: "../public/fonts/Josefin_Sans/JosefinSans-Italic-VariableFont_wght.ttf",
+      weight: "100 700",
+      style: "italic",
+    },
+  ],
+  variable: "--font-josefin-sans",
+  display: "swap",
 });
-const geistMono = localFont({
-  src: "./fonts/GeistMonoVF.woff",
-  variable: "--font-geist-mono",
+
+const cinzel = localFont({
+  src: "../public/fonts/Cinzel/Cinzel-VariableFont_wght.ttf",
+  variable: "--font-cinzel",
   weight: "100 900",
+  display: "swap",
 });
 
 export const metadata: Metadata = {
@@ -26,7 +39,7 @@ export default function RootLayout({
   return (
     <html lang="en">
       <body
-        className={`${geistSans.variable} ${geistMono.variable} antialiased`}
+        className={`${josefinSans.variable} ${cinzel.variable} antialiased font-sans`}
       >
         {children}
       </body>

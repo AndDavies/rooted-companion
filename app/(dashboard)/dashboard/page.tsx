@@ -21,7 +21,7 @@ export default async function DashboardPage() {
     <div className="space-y-8">
       {/* Page Header */}
       <div>
-        <h2 className="text-3xl font-serif font-bold text-neutral-900 mb-2">
+        <h2 className="text-2xl sm:text-3xl font-logo font-bold text-neutral-900 mb-2">
           Your Recovery Journey
         </h2>
         <p className="text-neutral-600">
@@ -30,7 +30,7 @@ export default async function DashboardPage() {
       </div>
 
       {/* User Info Cards */}
-      <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6">
         <AccountDetailsWidget user={user} />
         <BiometricSyncWidget userId={user.id} />
         <RecoveryStatsWidget />
@@ -38,6 +38,8 @@ export default async function DashboardPage() {
 
       {/* Quick Actions */}
       <QuickActionsWidget />
+      
+
     </div>
   )
 }

@@ -10,7 +10,7 @@ export default function LandingPage() {
     <div className="min-h-screen bg-white text-neutral-900 flex flex-col">
       {/* Header */}
       <header className="flex justify-between items-center px-6 py-4 border-b border-neutral-200">
-        <h1 className="text-2xl font-serif font-semibold tracking-tight">
+        <h1 className="text-2xl font-logo font-semibold tracking-tight">
           ROOTED Way Companion
         </h1>
         <nav className="flex items-center gap-6">
@@ -34,7 +34,7 @@ export default function LandingPage() {
           <div className="grid md:grid-cols-2 gap-12 items-center">
             {/* Left Column - Content */}
             <div className="space-y-6">
-              <h2 className="text-4xl md:text-5xl lg:text-6xl font-serif font-bold leading-tight text-neutral-900">
+              <h2 className="text-4xl md:text-5xl lg:text-6xl font-logo font-bold leading-tight text-neutral-900">
                 Root down.
                 <br />
                 Rise strong.
@@ -72,7 +72,7 @@ export default function LandingPage() {
         {/* Features Section */}
         <section className="container-custom py-16 md:py-24 bg-neutral-50">
           <div className="text-center mb-16">
-            <h3 className="text-3xl md:text-4xl font-serif font-bold text-neutral-900 mb-4">
+            <h3 className="text-3xl md:text-4xl font-logo font-bold text-neutral-900 mb-4">
               Your Recovery Journey
             </h3>
             <p className="text-lg text-neutral-600 max-w-2xl mx-auto">
@@ -87,7 +87,7 @@ export default function LandingPage() {
                 <div className="w-12 h-12 bg-green-100 rounded-lg flex items-center justify-center mx-auto mb-4">
                   <Activity className="w-6 h-6 text-green-700" />
                 </div>
-                <CardTitle className="text-xl font-serif">Biometric Sync</CardTitle>
+                <CardTitle className="text-xl font-logo">Biometric Sync</CardTitle>
               </CardHeader>
               <CardContent className="text-center">
                 <CardDescription className="text-neutral-600">
@@ -102,7 +102,7 @@ export default function LandingPage() {
                 <div className="w-12 h-12 bg-blue-100 rounded-lg flex items-center justify-center mx-auto mb-4">
                   <Wind className="w-6 h-6 text-blue-700" />
                 </div>
-                <CardTitle className="text-xl font-serif">Guided Breathwork</CardTitle>
+                <CardTitle className="text-xl font-logo">Guided Breathwork</CardTitle>
               </CardHeader>
               <CardContent className="text-center">
                 <CardDescription className="text-neutral-600">
@@ -117,7 +117,7 @@ export default function LandingPage() {
                 <div className="w-12 h-12 bg-amber-100 rounded-lg flex items-center justify-center mx-auto mb-4">
                   <BookOpen className="w-6 h-6 text-amber-700" />
                 </div>
-                <CardTitle className="text-xl font-serif">ROOTED Recovery Plans</CardTitle>
+                <CardTitle className="text-xl font-logo">ROOTED Recovery Plans</CardTitle>
               </CardHeader>
               <CardContent className="text-center">
                 <CardDescription className="text-neutral-600">
@@ -131,7 +131,7 @@ export default function LandingPage() {
         {/* CTA Section */}
         <section className="container-custom py-16 md:py-24">
           <div className="text-center space-y-6">
-            <h3 className="text-3xl md:text-4xl font-serif font-bold text-neutral-900">
+            <h3 className="text-3xl md:text-4xl font-logo font-bold text-neutral-900">
               Ready to Begin?
             </h3>
             <p className="text-lg text-neutral-600 max-w-2xl mx-auto">

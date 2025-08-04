@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import Link from "next/link";
+import Image from "next/image";
 import { createClient } from "@/utils/supabase/server";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -42,7 +43,7 @@ export default async function IntegrationsPage({
     <div className="space-y-8">
       {/* Page Header */}
       <div>
-        <h1 className="text-3xl font-serif font-bold text-neutral-900 mb-2">
+        <h1 className="text-2xl sm:text-3xl font-logo font-bold text-neutral-900 mb-2">
           Device Integrations
         </h1>
         <p className="text-neutral-600">
@@ -75,7 +76,19 @@ export default async function IntegrationsPage({
         <CardHeader>
           <CardTitle className="flex items-center gap-3">
             <div className="w-10 h-10 bg-gradient-to-br from-blue-500 to-blue-600 rounded-lg flex items-center justify-center">
-              <Watch className="w-5 h-5 text-white" />
+              {/* Use Garmin logo if available, otherwise fallback to icon */}
+              <Image 
+                src="/logos/garmin-logo.png" 
+                alt="Garmin" 
+                width={20}
+                height={20}
+                className="w-5 h-5 object-contain"
+                onError={() => {
+                  // Fallback to Watch icon if logo fails to load
+                  // This will be handled by the hidden Watch icon
+                }}
+              />
+              <Watch className="w-5 h-5 text-white hidden" />
             </div>
             <div className="flex-1">
               <div className="flex items-center gap-2">
@@ -139,7 +152,7 @@ export default async function IntegrationsPage({
 
       {/* Future Integrations */}
       <div>
-        <h2 className="text-xl font-serif font-semibold text-neutral-900 mb-4">
+        <h2 className="text-xl font-logo font-semibold text-neutral-900 mb-4">
           Coming Soon
         </h2>
         <div className="grid gap-4 md:grid-cols-2">
