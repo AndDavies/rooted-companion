@@ -1,101 +1,171 @@
-import Image from "next/image";
+// LandingPage.tsx – Basic Landing Page for ROOTED Way Companion
 
-export default function Home() {
+import Link from "next/link"
+import { Button } from "@/components/ui/button"
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
+import { Activity, Wind, BookOpen } from "lucide-react"
+
+export default function LandingPage() {
   return (
-    <div className="grid grid-rows-[20px_1fr_20px] items-center justify-items-center min-h-screen p-8 pb-20 gap-16 sm:p-20 font-[family-name:var(--font-geist-sans)]">
-      <main className="flex flex-col gap-8 row-start-2 items-center sm:items-start">
-        <Image
-          className="dark:invert"
-          src="https://nextjs.org/icons/next.svg"
-          alt="Next.js logo"
-          width={180}
-          height={38}
-          priority
-        />
-        <ol className="list-inside list-decimal text-sm text-center sm:text-left font-[family-name:var(--font-geist-mono)]">
-          <li className="mb-2">
-            Get started by editing{" "}
-            <code className="bg-black/[.05] dark:bg-white/[.06] px-1 py-0.5 rounded font-semibold">
-              app/page.tsx
-            </code>
-            .
-          </li>
-          <li>Save and see your changes instantly.</li>
-        </ol>
+    <div className="min-h-screen bg-white text-neutral-900 flex flex-col">
+      {/* Header */}
+      <header className="flex justify-between items-center px-6 py-4 border-b border-neutral-200">
+        <h1 className="text-2xl font-serif font-semibold tracking-tight">
+          ROOTED Way Companion
+        </h1>
+        <nav className="flex items-center gap-6">
+          <Link href="/about" className="text-sm text-neutral-600 hover:text-neutral-900 transition-colors">
+            About
+          </Link>
+          <Link href="/retreats" className="text-sm text-neutral-600 hover:text-neutral-900 transition-colors">
+            Retreats
+          </Link>
+          <Button variant="outline" size="sm">
+            Log in
+          </Button>
+        </nav>
+      </header>
 
-        <div className="flex gap-4 items-center flex-col sm:flex-row">
-          <a
-            className="rounded-full border border-solid border-transparent transition-colors flex items-center justify-center bg-foreground text-background gap-2 hover:bg-[#383838] dark:hover:bg-[#ccc] text-sm sm:text-base h-10 sm:h-12 px-4 sm:px-5"
-            href="https://vercel.com/new?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            <Image
-              className="dark:invert"
-              src="https://nextjs.org/icons/vercel.svg"
-              alt="Vercel logomark"
-              width={20}
-              height={20}
-            />
-            Deploy now
-          </a>
-          <a
-            className="rounded-full border border-solid border-black/[.08] dark:border-white/[.145] transition-colors flex items-center justify-center hover:bg-[#f2f2f2] dark:hover:bg-[#1a1a1a] hover:border-transparent text-sm sm:text-base h-10 sm:h-12 px-4 sm:px-5 sm:min-w-44"
-            href="https://nextjs.org/docs?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            Read our docs
-          </a>
-        </div>
+      {/* Hero Section */}
+      <main className="flex-1">
+        <section className="container-custom py-16 md:py-24">
+          <div className="grid md:grid-cols-2 gap-12 items-center">
+            {/* Left Column - Content */}
+            <div className="space-y-6">
+              <h2 className="text-4xl md:text-5xl lg:text-6xl font-serif font-bold leading-tight text-neutral-900">
+                Root down.
+                <br />
+                Rise strong.
+              </h2>
+              <p className="text-lg md:text-xl text-neutral-600 leading-relaxed">
+                A digital recovery companion blending wearable insights, breathwork, and personalized coaching.
+              </p>
+              <div className="flex flex-col sm:flex-row gap-4">
+                <Button size="lg" className="px-8 py-3 text-base">
+                  Start Your Reset
+                </Button>
+                <Button variant="outline" size="lg" className="px-8 py-3 text-base">
+                  Learn More
+                </Button>
+              </div>
+            </div>
+
+            {/* Right Column - Placeholder */}
+            <div className="relative">
+              <div className="w-full h-[400px] md:h-[500px] bg-gradient-to-br from-neutral-100 to-neutral-200 rounded-xl shadow-inner flex items-center justify-center">
+                <div className="text-center space-y-4">
+                  <div className="w-16 h-16 bg-neutral-300 rounded-full flex items-center justify-center mx-auto">
+                    <Activity className="w-8 h-8 text-neutral-600" />
+                  </div>
+                  <p className="text-neutral-500 text-sm">Visual Placeholder</p>
+                  <p className="text-neutral-400 text-xs">Future animation or image</p>
+                </div>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        {/* Features Section */}
+        <section className="container-custom py-16 md:py-24 bg-neutral-50">
+          <div className="text-center mb-16">
+            <h3 className="text-3xl md:text-4xl font-serif font-bold text-neutral-900 mb-4">
+              Your Recovery Journey
+            </h3>
+            <p className="text-lg text-neutral-600 max-w-2xl mx-auto">
+              Three pillars of support to guide your transformation
+            </p>
+          </div>
+
+          <div className="grid md:grid-cols-3 gap-8">
+            {/* Feature 1: Biometric Sync */}
+            <Card className="border-neutral-200 hover:shadow-md transition-all duration-200">
+              <CardHeader className="text-center">
+                <div className="w-12 h-12 bg-green-100 rounded-lg flex items-center justify-center mx-auto mb-4">
+                  <Activity className="w-6 h-6 text-green-700" />
+                </div>
+                <CardTitle className="text-xl font-serif">Biometric Sync</CardTitle>
+              </CardHeader>
+              <CardContent className="text-center">
+                <CardDescription className="text-neutral-600">
+                  Integrates with your Garmin to personalize recovery strategies based on your body's signals.
+                </CardDescription>
+              </CardContent>
+            </Card>
+
+            {/* Feature 2: Guided Breathwork */}
+            <Card className="border-neutral-200 hover:shadow-md transition-all duration-200">
+              <CardHeader className="text-center">
+                <div className="w-12 h-12 bg-blue-100 rounded-lg flex items-center justify-center mx-auto mb-4">
+                  <Wind className="w-6 h-6 text-blue-700" />
+                </div>
+                <CardTitle className="text-xl font-serif">Guided Breathwork</CardTitle>
+              </CardHeader>
+              <CardContent className="text-center">
+                <CardDescription className="text-neutral-600">
+                  Curated sessions for energy, focus, or calm—tailored to your nervous system needs.
+                </CardDescription>
+              </CardContent>
+            </Card>
+
+            {/* Feature 3: ROOTED Recovery Plans */}
+            <Card className="border-neutral-200 hover:shadow-md transition-all duration-200">
+              <CardHeader className="text-center">
+                <div className="w-12 h-12 bg-amber-100 rounded-lg flex items-center justify-center mx-auto mb-4">
+                  <BookOpen className="w-6 h-6 text-amber-700" />
+                </div>
+                <CardTitle className="text-xl font-serif">ROOTED Recovery Plans</CardTitle>
+              </CardHeader>
+              <CardContent className="text-center">
+                <CardDescription className="text-neutral-600">
+                  Science & soul combined in structured coaching rhythms for lasting transformation.
+                </CardDescription>
+              </CardContent>
+            </Card>
+          </div>
+        </section>
+
+        {/* CTA Section */}
+        <section className="container-custom py-16 md:py-24">
+          <div className="text-center space-y-6">
+            <h3 className="text-3xl md:text-4xl font-serif font-bold text-neutral-900">
+              Ready to Begin?
+            </h3>
+            <p className="text-lg text-neutral-600 max-w-2xl mx-auto">
+              Join thousands who have transformed their recovery journey with ROOTED Way Companion.
+            </p>
+            <div className="flex flex-col sm:flex-row gap-4 justify-center">
+              <Button size="lg" className="px-8 py-3 text-base">
+                Start Free Trial
+              </Button>
+              <Button variant="outline" size="lg" className="px-8 py-3 text-base">
+                Schedule Demo
+              </Button>
+            </div>
+          </div>
+        </section>
       </main>
-      <footer className="row-start-3 flex gap-6 flex-wrap items-center justify-center">
-        <a
-          className="flex items-center gap-2 hover:underline hover:underline-offset-4"
-          href="https://nextjs.org/learn?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <Image
-            aria-hidden
-            src="https://nextjs.org/icons/file.svg"
-            alt="File icon"
-            width={16}
-            height={16}
-          />
-          Learn
-        </a>
-        <a
-          className="flex items-center gap-2 hover:underline hover:underline-offset-4"
-          href="https://vercel.com/templates?framework=next.js&utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <Image
-            aria-hidden
-            src="https://nextjs.org/icons/window.svg"
-            alt="Window icon"
-            width={16}
-            height={16}
-          />
-          Examples
-        </a>
-        <a
-          className="flex items-center gap-2 hover:underline hover:underline-offset-4"
-          href="https://nextjs.org?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <Image
-            aria-hidden
-            src="https://nextjs.org/icons/globe.svg"
-            alt="Globe icon"
-            width={16}
-            height={16}
-          />
-          Go to nextjs.org →
-        </a>
+
+      {/* Footer */}
+      <footer className="border-t border-neutral-200 bg-neutral-50">
+        <div className="container-custom py-8">
+          <div className="text-center space-y-4">
+            <p className="text-sm text-neutral-500">
+              &copy; {new Date().getFullYear()} ROOTED. All rights reserved.
+            </p>
+            <div className="flex justify-center gap-6 text-sm text-neutral-500">
+              <Link href="/privacy" className="hover:text-neutral-700 transition-colors">
+                Privacy Policy
+              </Link>
+              <Link href="/terms" className="hover:text-neutral-700 transition-colors">
+                Terms of Service
+              </Link>
+              <Link href="/contact" className="hover:text-neutral-700 transition-colors">
+                Contact
+              </Link>
+            </div>
+          </div>
+        </div>
       </footer>
     </div>
-  );
+  )
 }
