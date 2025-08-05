@@ -1,17 +1,16 @@
 import { createClient } from '@/utils/supabase/server';
 import { redirect } from 'next/navigation';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Button } from '@/components/ui/button';
-import { Calendar, CheckCircle2, Circle, Clock, RefreshCw } from 'lucide-react';
+import { Calendar, CheckCircle2, Circle, Clock } from 'lucide-react';
 import { getCurrentPlan } from '@/lib/llm/planAgent';
 
 type RecoveryPlan = {
   id: string;
   title: string;
-  description?: string;
+  description: string | null;
   start_date: string;
   end_date: string;
-  created_at: string;
+  created_at: string | null;
   recovery_plan_tasks: RecoveryPlanTask[];
 };
 
@@ -19,9 +18,9 @@ type RecoveryPlanTask = {
   id: string;
   date: string;
   action: string;
-  rationale: string;
-  category: string;
-  completed: boolean;
+  rationale: string | null;
+  category: string | null;
+  completed: boolean | null;
 };
 
 // Client component for interactive elements
@@ -147,7 +146,7 @@ export default async function PlanningPage() {
                 {currentPlan.recovery_plan_tasks
                   .sort((a, b) => a.date.localeCompare(b.date))
                   .map((task) => {
-                    const { isPast, isToday, isFuture } = isTaskDate(task);
+                    const { isPast, isToday } = isTaskDate(task);
                     
                     return (
                       <div
@@ -185,8 +184,8 @@ export default async function PlanningPage() {
                                     Today
                                   </span>
                                 )}
-                                <span className={`px-2 py-1 text-xs font-medium rounded-full border ${getCategoryColor(task.category)}`}>
-                                  {getCategoryIcon(task.category)} {task.category}
+                                <span className={`px-2 py-1 text-xs font-medium rounded-full border ${getCategoryColor(task.category || 'default')}`}>
+                                  {getCategoryIcon(task.category || 'default')} {task.category || 'general'}
                                 </span>
                               </div>
                             </div>

@@ -27,11 +27,7 @@ type CurrentPlan = {
   }>;
 } | null;
 
-interface RecoveryPlanWidgetProps {
-  userId: string;
-}
-
-export default function RecoveryPlanWidget({ userId }: RecoveryPlanWidgetProps) {
+export default function RecoveryPlanWidget() {
   const [todaysTask, setTodaysTask] = useState<TodaysTask>(null);
   const [currentPlan, setCurrentPlan] = useState<CurrentPlan>(null);
   const [isLoading, setIsLoading] = useState(true);
@@ -55,7 +51,7 @@ export default function RecoveryPlanWidget({ userId }: RecoveryPlanWidgetProps) 
           setTotalDays(tasks.length);
           
           // Calculate which day we're on
-          const completedTasks = tasks.filter((task: any) => task.completed).length;
+          const completedTasks = tasks.filter((task: { completed: boolean }) => task.completed).length;
           setDayNumber(completedTasks + 1); // Next task to complete
         }
       }
@@ -252,7 +248,7 @@ export default function RecoveryPlanWidget({ userId }: RecoveryPlanWidgetProps) 
             <div>
               <h3 className="font-medium text-gray-900">No Task for Today</h3>
               <p className="text-sm text-gray-600 mt-1">
-                Your current plan doesn't have a task scheduled for today.
+                Your current plan doesn&apos;t have a task scheduled for today.
               </p>
             </div>
             <Link href="/dashboard/planning">
