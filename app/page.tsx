@@ -1,6 +1,7 @@
 // LandingPage.tsx – Basic Landing Page for ROOTED Way Companion
 
 import Link from "next/link"
+import Image from "next/image"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Activity, Wind, BookOpen } from "lucide-react"
@@ -54,16 +55,16 @@ export default function LandingPage() {
               </div>
             </div>
 
-            {/* Right Column - Placeholder */}
+            {/* Right Column - Hero Image */}
             <div className="relative">
-              <div className="w-full h-[400px] md:h-[500px] bg-gradient-to-br from-neutral-100 to-neutral-200 rounded-xl shadow-inner flex items-center justify-center">
-                <div className="text-center space-y-4">
-                  <div className="w-16 h-16 bg-neutral-300 rounded-full flex items-center justify-center mx-auto">
-                    <Activity className="w-8 h-8 text-neutral-600" />
-                  </div>
-                  <p className="text-neutral-500 text-sm">Visual Placeholder</p>
-                  <p className="text-neutral-400 text-xs">Future animation or image</p>
-                </div>
+              <div className="w-full h-[400px] md:h-[500px] relative">
+                <Image
+                  src="/images/rooted_companion_hero.png"
+                  alt="ROOTED Way Companion - Digital recovery companion blending wearable insights, breathwork, and personalized coaching"
+                  fill
+                  className="object-cover rounded-xl"
+                  priority
+                />
               </div>
             </div>
           </div>
