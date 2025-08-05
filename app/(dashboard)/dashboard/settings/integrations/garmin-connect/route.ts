@@ -1,9 +1,9 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { createClient } from '@/utils/supabase/server'
+import { createClientForActions } from '@/utils/supabase/server'
 import { generateCodeVerifier, generateCodeChallenge, generateState } from '@/lib/oauth'
 
 export async function GET(request: NextRequest) {
-  const supabase = await createClient()
+  const supabase = await createClientForActions()
 
   const {
     data: { user },

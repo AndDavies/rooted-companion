@@ -1,13 +1,13 @@
 'use server';
 
-import { createClient } from '@/utils/supabase/server';
+import { createClientForActions } from '@/utils/supabase/server';
 import { redirect } from 'next/navigation';
 import { revalidatePath } from 'next/cache';
 import { supabaseAdmin } from '@/utils/supabase/admin';
 
 export async function getDailySuggestion() {
   try {
-    const supabase = await createClient();
+    const supabase = await createClientForActions();
     const { data: { user }, error } = await supabase.auth.getUser();
     
     if (error || !user) {
@@ -64,7 +64,7 @@ export async function getDailySuggestion() {
 
 export async function markSuggestionComplete(suggestionId: string) {
   try {
-    const supabase = await createClient();
+    const supabase = await createClientForActions();
     const { data: { user }, error } = await supabase.auth.getUser();
     
     if (error || !user) {
@@ -110,7 +110,7 @@ export async function markSuggestionComplete(suggestionId: string) {
 
 export async function submitMoodReflection(suggestionId: string, moodEmoji: string, moodText: string) {
   try {
-    const supabase = await createClient();
+    const supabase = await createClientForActions();
     const { data: { user }, error } = await supabase.auth.getUser();
     
     if (error || !user) {
@@ -179,7 +179,7 @@ export async function submitMoodReflection(suggestionId: string, moodEmoji: stri
 
 export async function generateNewSuggestion() {
   try {
-    const supabase = await createClient();
+    const supabase = await createClientForActions();
     const { data: { user }, error } = await supabase.auth.getUser();
     
     if (error || !user) {
@@ -216,7 +216,7 @@ export async function generateNewSuggestion() {
 
 export async function getMoodReflection(suggestionId: string) {
   try {
-    const supabase = await createClient();
+    const supabase = await createClientForActions();
     const { data: { user }, error } = await supabase.auth.getUser();
     
     if (error || !user) {

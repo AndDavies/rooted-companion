@@ -1,8 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { createClient } from '@/utils/supabase/server'
+import { createClientForActions } from '@/utils/supabase/server'
 
 export async function GET(request: NextRequest) {
-  const supabase = await createClient()
+  const supabase = await createClientForActions()
 
   const url = new URL(request.url)
   const code = url.searchParams.get('code')

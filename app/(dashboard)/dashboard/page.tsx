@@ -4,7 +4,8 @@ import {
   BiometricSyncWidget, 
   RecoveryStatsWidget, 
   QuickActionsWidget,
-  DailyPulseWidget 
+  DailyPulseWidget,
+  RecoveryPlanWidget 
 } from '@/components/widgets'
 
 export default async function DashboardPage() {
@@ -30,9 +31,10 @@ export default async function DashboardPage() {
         </p>
       </div>
 
-      {/* Daily Pulse - Featured Section */}
-      <div className="max-w-2xl mx-auto">
+      {/* Featured Sections */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 max-w-5xl mx-auto">
         <DailyPulseWidget />
+        <RecoveryPlanWidget userId={user.id} />
       </div>
 
       {/* User Info Cards */}

@@ -1,11 +1,11 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { markSuggestionCompleted } from '@/lib/llm/suggestionAgent';
-import { createClient } from '@/utils/supabase/server';
+import { createClientForActions } from '@/utils/supabase/server';
 
 export async function POST(request: NextRequest) {
   try {
     // Get the current user from Supabase auth
-    const supabase = await createClient();
+    const supabase = await createClientForActions();
     const { data: { user }, error } = await supabase.auth.getUser();
     
     if (error || !user) {
@@ -80,7 +80,7 @@ export async function POST(request: NextRequest) {
 export async function GET() {
   try {
     // Get the current user from Supabase auth
-    const supabase = await createClient();
+    const supabase = await createClientForActions();
     const { data: { user }, error } = await supabase.auth.getUser();
     
     if (error || !user) {

@@ -59,6 +59,24 @@ Provides action buttons for common dashboard tasks.
 <QuickActionsWidget actions={customActions} />
 ```
 
+### RecoveryPlanWidget
+Displays today's recovery task from the user's active recovery plan.
+
+**Props:**
+- `userId`: String user ID for database queries
+
+**Features:**
+- Shows daily recovery task with action and rationale
+- Progress tracking (Day X of Y)
+- Mark task as completed functionality
+- Generate new plan when no plan exists
+- Link to full plan details page
+
+**Usage:**
+```tsx
+<RecoveryPlanWidget userId={user.id} />
+```
+
 ## Importing
 
 Import individual widgets:
@@ -72,7 +90,9 @@ import {
   AccountDetailsWidget, 
   BiometricSyncWidget, 
   RecoveryStatsWidget, 
-  QuickActionsWidget 
+  QuickActionsWidget,
+  DailyPulseWidget,
+  RecoveryPlanWidget 
 } from '@/components/widgets'
 ```
 

@@ -145,271 +145,6 @@ export type Database = {
         }
         Relationships: []
       }
-      communities: {
-        Row: {
-          created_at: string | null
-          id: string
-          name: string
-          settings: Json | null
-        }
-        Insert: {
-          created_at?: string | null
-          id?: string
-          name?: string
-          settings?: Json | null
-        }
-        Update: {
-          created_at?: string | null
-          id?: string
-          name?: string
-          settings?: Json | null
-        }
-        Relationships: []
-      }
-      community_members: {
-        Row: {
-          community_id: string
-          joined_at: string | null
-          role: string
-          user_id: string
-        }
-        Insert: {
-          community_id: string
-          joined_at?: string | null
-          role?: string
-          user_id: string
-        }
-        Update: {
-          community_id?: string
-          joined_at?: string | null
-          role?: string
-          user_id?: string
-        }
-        Relationships: [
-          {
-            foreignKeyName: "community_members_community_id_fkey"
-            columns: ["community_id"]
-            isOneToOne: false
-            referencedRelation: "communities"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
-      content: {
-        Row: {
-          access: string | null
-          community_id: string | null
-          created_at: string | null
-          id: string
-          title: string
-          type: string
-          url: string | null
-        }
-        Insert: {
-          access?: string | null
-          community_id?: string | null
-          created_at?: string | null
-          id?: string
-          title: string
-          type: string
-          url?: string | null
-        }
-        Update: {
-          access?: string | null
-          community_id?: string | null
-          created_at?: string | null
-          id?: string
-          title?: string
-          type?: string
-          url?: string | null
-        }
-        Relationships: [
-          {
-            foreignKeyName: "content_community_id_fkey"
-            columns: ["community_id"]
-            isOneToOne: false
-            referencedRelation: "communities"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
-      event_attendees: {
-        Row: {
-          event_id: string
-          responded_at: string | null
-          status: string | null
-          user_id: string
-        }
-        Insert: {
-          event_id: string
-          responded_at?: string | null
-          status?: string | null
-          user_id: string
-        }
-        Update: {
-          event_id?: string
-          responded_at?: string | null
-          status?: string | null
-          user_id?: string
-        }
-        Relationships: [
-          {
-            foreignKeyName: "event_attendees_event_id_fkey"
-            columns: ["event_id"]
-            isOneToOne: false
-            referencedRelation: "events"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
-      event_registrations: {
-        Row: {
-          created_at: string
-          event_id: string
-          id: string
-          status: Database["public"]["Enums"]["event_registration_status"]
-          user_id: string
-        }
-        Insert: {
-          created_at?: string
-          event_id: string
-          id?: string
-          status?: Database["public"]["Enums"]["event_registration_status"]
-          user_id: string
-        }
-        Update: {
-          created_at?: string
-          event_id?: string
-          id?: string
-          status?: Database["public"]["Enums"]["event_registration_status"]
-          user_id?: string
-        }
-        Relationships: [
-          {
-            foreignKeyName: "event_registrations_event_id_fkey"
-            columns: ["event_id"]
-            isOneToOne: false
-            referencedRelation: "events"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
-      events: {
-        Row: {
-          access: Database["public"]["Enums"]["event_access"]
-          agenda: Json | null
-          banner_image_url: string | null
-          capacity: number | null
-          community_id: string | null
-          created_at: string | null
-          created_by: string | null
-          description: string | null
-          details: Json | null
-          end_time: string | null
-          external_booking_url: string | null
-          facilitators: Json | null
-          host: string | null
-          id: string
-          location: string | null
-          metadata: Json | null
-          post_event_content: Json | null
-          start_time: string
-          status: Database["public"]["Enums"]["event_status"]
-          tags: string[] | null
-          timezone: string | null
-          title: string
-          type: Database["public"]["Enums"]["event_type"]
-          updated_at: string | null
-          virtual_link: string | null
-        }
-        Insert: {
-          access?: Database["public"]["Enums"]["event_access"]
-          agenda?: Json | null
-          banner_image_url?: string | null
-          capacity?: number | null
-          community_id?: string | null
-          created_at?: string | null
-          created_by?: string | null
-          description?: string | null
-          details?: Json | null
-          end_time?: string | null
-          external_booking_url?: string | null
-          facilitators?: Json | null
-          host?: string | null
-          id?: string
-          location?: string | null
-          metadata?: Json | null
-          post_event_content?: Json | null
-          start_time: string
-          status?: Database["public"]["Enums"]["event_status"]
-          tags?: string[] | null
-          timezone?: string | null
-          title: string
-          type?: Database["public"]["Enums"]["event_type"]
-          updated_at?: string | null
-          virtual_link?: string | null
-        }
-        Update: {
-          access?: Database["public"]["Enums"]["event_access"]
-          agenda?: Json | null
-          banner_image_url?: string | null
-          capacity?: number | null
-          community_id?: string | null
-          created_at?: string | null
-          created_by?: string | null
-          description?: string | null
-          details?: Json | null
-          end_time?: string | null
-          external_booking_url?: string | null
-          facilitators?: Json | null
-          host?: string | null
-          id?: string
-          location?: string | null
-          metadata?: Json | null
-          post_event_content?: Json | null
-          start_time?: string
-          status?: Database["public"]["Enums"]["event_status"]
-          tags?: string[] | null
-          timezone?: string | null
-          title?: string
-          type?: Database["public"]["Enums"]["event_type"]
-          updated_at?: string | null
-          virtual_link?: string | null
-        }
-        Relationships: [
-          {
-            foreignKeyName: "events_community_id_fkey"
-            columns: ["community_id"]
-            isOneToOne: false
-            referencedRelation: "communities"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
-      feedback: {
-        Row: {
-          content: Json | null
-          created_at: string | null
-          facilitator_id: string | null
-          id: string
-          user_id: string | null
-        }
-        Insert: {
-          content?: Json | null
-          created_at?: string | null
-          facilitator_id?: string | null
-          id?: string
-          user_id?: string | null
-        }
-        Update: {
-          content?: Json | null
-          created_at?: string | null
-          facilitator_id?: string | null
-          id?: string
-          user_id?: string | null
-        }
-        Relationships: []
-      }
       mood_reflections: {
         Row: {
           created_at: string | null
@@ -472,72 +207,79 @@ export type Database = {
         }
         Relationships: []
       }
-      posts: {
+      recovery_plan_tasks: {
         Row: {
-          content: Json | null
+          action: string
+          category: string | null
+          completed: boolean | null
           created_at: string | null
+          date: string
           id: string
-          space_id: string | null
-          type: string
+          plan_id: string | null
+          rationale: string | null
           user_id: string | null
         }
         Insert: {
-          content?: Json | null
+          action: string
+          category?: string | null
+          completed?: boolean | null
           created_at?: string | null
+          date: string
           id?: string
-          space_id?: string | null
-          type: string
+          plan_id?: string | null
+          rationale?: string | null
           user_id?: string | null
         }
         Update: {
-          content?: Json | null
+          action?: string
+          category?: string | null
+          completed?: boolean | null
           created_at?: string | null
+          date?: string
           id?: string
-          space_id?: string | null
-          type?: string
+          plan_id?: string | null
+          rationale?: string | null
           user_id?: string | null
         }
         Relationships: [
           {
-            foreignKeyName: "posts_space_id_fkey"
-            columns: ["space_id"]
+            foreignKeyName: "recovery_plan_tasks_plan_id_fkey"
+            columns: ["plan_id"]
             isOneToOne: false
-            referencedRelation: "spaces"
+            referencedRelation: "recovery_plans"
             referencedColumns: ["id"]
           },
         ]
       }
-      spaces: {
+      recovery_plans: {
         Row: {
-          community_id: string | null
           created_at: string | null
+          description: string | null
+          end_date: string
           id: string
-          name: string
-          visibility: string | null
+          start_date: string
+          title: string
+          user_id: string | null
         }
         Insert: {
-          community_id?: string | null
           created_at?: string | null
+          description?: string | null
+          end_date: string
           id?: string
-          name: string
-          visibility?: string | null
+          start_date: string
+          title: string
+          user_id?: string | null
         }
         Update: {
-          community_id?: string | null
           created_at?: string | null
+          description?: string | null
+          end_date?: string
           id?: string
-          name?: string
-          visibility?: string | null
+          start_date?: string
+          title?: string
+          user_id?: string | null
         }
-        Relationships: [
-          {
-            foreignKeyName: "spaces_community_id_fkey"
-            columns: ["community_id"]
-            isOneToOne: false
-            referencedRelation: "communities"
-            referencedColumns: ["id"]
-          },
-        ]
+        Relationships: []
       }
       studies_inventory: {
         Row: {
@@ -617,6 +359,39 @@ export type Database = {
           suggestion?: Json | null
           user_id?: string | null
           wearable_data?: Json | null
+        }
+        Relationships: []
+      }
+      user_onboarding: {
+        Row: {
+          availability: string | null
+          created_at: string | null
+          energy_level: string | null
+          id: string
+          preferred_focus: string | null
+          sleep_quality: string | null
+          stress_level: string | null
+          user_id: string | null
+        }
+        Insert: {
+          availability?: string | null
+          created_at?: string | null
+          energy_level?: string | null
+          id?: string
+          preferred_focus?: string | null
+          sleep_quality?: string | null
+          stress_level?: string | null
+          user_id?: string | null
+        }
+        Update: {
+          availability?: string | null
+          created_at?: string | null
+          energy_level?: string | null
+          id?: string
+          preferred_focus?: string | null
+          sleep_quality?: string | null
+          stress_level?: string | null
+          user_id?: string | null
         }
         Relationships: []
       }

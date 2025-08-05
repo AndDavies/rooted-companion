@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Watch, User, Shield, Bell } from "lucide-react";
+import { Watch, User, Shield, Bell, Heart } from "lucide-react";
 
 export const metadata: Metadata = {
   title: "Settings - ROOTED Way Companion",
@@ -24,6 +24,27 @@ export default function SettingsPage() {
 
       {/* Settings Categories */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4 sm:gap-6">
+        {/* Wellness Profile */}
+        <Card className="border-neutral-200 hover:shadow-md transition-all duration-200">
+          <CardHeader>
+            <CardTitle className="flex items-center gap-3">
+              <div className="w-10 h-10 bg-gradient-to-br from-pink-500 to-pink-600 rounded-lg flex items-center justify-center">
+                <Heart className="w-5 h-5 text-white" />
+              </div>
+              <span>Wellness Profile</span>
+            </CardTitle>
+            <CardDescription className="text-neutral-600">
+              Update your wellness preferences and recovery goals
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <Button asChild className="w-full transition-all duration-200">
+              <Link href="/onboarding?update=true">
+                Update Wellness Profile
+              </Link>
+            </Button>
+          </CardContent>
+        </Card>
         {/* Device Integrations */}
         <Card className="border-neutral-200 hover:shadow-md transition-all duration-200">
           <CardHeader>

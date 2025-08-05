@@ -1,11 +1,11 @@
 import { NextResponse } from 'next/server';
 import { generateDailySuggestion } from '@/lib/llm/suggestionAgent';
-import { createClient } from '@/utils/supabase/server';
+import { createClientForActions } from '@/utils/supabase/server';
 
 export async function POST() {
   try {
     // Get the current user from Supabase auth
-    const supabase = await createClient();
+    const supabase = await createClientForActions();
     const { data: { user }, error } = await supabase.auth.getUser();
     
     if (error || !user) {
@@ -35,7 +35,7 @@ export async function POST() {
 export async function GET() {
   try {
     // Get the current user from Supabase auth
-    const supabase = await createClient();
+    const supabase = await createClientForActions();
     const { data: { user }, error } = await supabase.auth.getUser();
     
     if (error || !user) {
