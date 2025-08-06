@@ -12,6 +12,8 @@ type TodaysTask = {
   action: string;
   rationale: string;
   category: string;
+  time_suggestion: string | null;
+  recipe_id: string | null;
   completed: boolean;
   recovery_plans: {
     id: string;

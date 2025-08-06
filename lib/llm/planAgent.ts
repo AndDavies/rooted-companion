@@ -6,14 +6,21 @@ import { supabaseAdmin } from "@/utils/supabase/admin";
 export type PlanPayload = {
   title: string;
   description?: string;
-  days: DayTask[];
+  days: DayPlan[];
+};
+
+export type DayPlan = {
+  date: string; // YYYY-MM-DD format
+  tasks: DayTask[];
+  reflection_prompt?: string;
 };
 
 export type DayTask = {
-  date: string; // YYYY-MM-DD format
-  category: 'movement' | 'breathwork' | 'mindset' | 'sleep' | 'nutrition';
-  action: string;
-  rationale: string;
+  type: 'movement' | 'breathwork' | 'nutrition' | 'mindset' | 'sleep';
+  title: string;              // concise suggestion
+  rationale: string;          // short explanation of benefit
+  time_suggestion?: 'morning' | 'afternoon' | 'evening' | 'flexible';
+  recipe_id?: string;         // only for nutrition tasks
 };
 
 type BiometricData = {
@@ -252,14 +259,17 @@ IMPORTANT: Include a brief description that mentions this plan is personalized b
 
 Guidelines:
 - Plans should be 3-5 days long
-- Keep actions simple and achievable (5-20 minutes)
+- Each day should have 2-4 tasks from different wellness domains
+- Keep tasks simple and achievable (5-20 minutes each)
 - Focus on evidence-based practices for recovery
 - Tailor to their current biometric state and preferences
 - Use warm, encouraging language that acknowledges their specific situation
-- Categories: movement, breathwork, mindset, sleep, nutrition
-- Consider their availability for timing suggestions
+- Task types: movement, breathwork, mindset, sleep, nutrition
+- Include time_suggestion based on their availability and task type
 - Weight activities toward their preferred focus area
+- Include optional reflection_prompt for deeper engagement
 - Never suggest anything medical or dangerous
+- Ensure tasks complement each other within each day
 
 You must respond with a valid JSON object with this exact structure:
 {
@@ -268,9 +278,21 @@ You must respond with a valid JSON object with this exact structure:
   "days": [
     {
       "date": "2025-01-15",
-      "category": "breathwork",
-      "action": "Box breathing 5 minutes before bed",
-      "rationale": "Evening breathwork helps lower cortisol before sleep, perfect for your evening availability"
+      "tasks": [
+        {
+          "type": "breathwork",
+          "title": "Box breathing 5 minutes",
+          "rationale": "Activates parasympathetic nervous system and reduces cortisol",
+          "time_suggestion": "evening"
+        },
+        {
+          "type": "sleep",
+          "title": "Wind-down routine with dim lights",
+          "rationale": "Supports natural melatonin production for better sleep quality",
+          "time_suggestion": "evening"
+        }
+      ],
+      "reflection_prompt": "What helped you feel most grounded today?"
     }
   ]
 }`;
@@ -415,26 +437,62 @@ Based on this information, create a focused recovery plan to help restore balanc
 function generateFallbackPlan(startDate: string): PlanPayload {
   const plans = [
     {
-      title: "3-Day Stress Recovery Reset",
+      title: "3-Day Nervous System Recovery",
       description: "A personalized plan crafted from your wellness preferences to restore nervous system balance",
       days: [
         {
           date: startDate,
-          category: "breathwork" as const,
-          action: "Box breathing: 4 counts in, 4 hold, 4 out, 4 hold. Repeat for 5 minutes.",
-          rationale: "Box breathing activates the parasympathetic nervous system and reduces cortisol levels."
+          tasks: [
+            {
+              type: "breathwork" as const,
+              title: "Box breathing for 5 minutes",
+              rationale: "Activates the parasympathetic nervous system and reduces cortisol levels",
+              time_suggestion: "evening" as const
+            },
+            {
+              type: "mindset" as const,
+              title: "Write down 3 things you're grateful for",
+              rationale: "Gratitude practice shifts nervous system toward calm and supports emotional regulation",
+              time_suggestion: "evening" as const
+            }
+          ],
+          reflection_prompt: "What felt most calming to you today?"
         },
         {
           date: new Date(new Date(startDate).getTime() + 24 * 60 * 60 * 1000).toISOString().split('T')[0],
-          category: "movement" as const,
-          action: "Take a 10-minute gentle walk in nature or around your neighborhood.",
-          rationale: "Light movement and natural light exposure help regulate circadian rhythms and reduce stress hormones."
+          tasks: [
+            {
+              type: "movement" as const,
+              title: "10-minute gentle walk outdoors",
+              rationale: "Light movement and natural light help regulate circadian rhythms and reduce stress hormones",
+              time_suggestion: "morning" as const
+            },
+            {
+              type: "nutrition" as const,
+              title: "Drink a glass of water with lemon",
+              rationale: "Hydration and vitamin C support cortisol regulation and energy levels",
+              time_suggestion: "morning" as const
+            }
+          ],
+          reflection_prompt: "How did movement affect your energy today?"
         },
         {
           date: new Date(new Date(startDate).getTime() + 48 * 60 * 60 * 1000).toISOString().split('T')[0],
-          category: "sleep" as const,
-          action: "Create a wind-down routine: dim lights 1 hour before bed and practice gratitude.",
-          rationale: "Proper sleep hygiene supports nervous system recovery and emotional regulation."
+          tasks: [
+            {
+              type: "sleep" as const,
+              title: "Dim lights 1 hour before bed",
+              rationale: "Light regulation supports natural melatonin production for better sleep quality",
+              time_suggestion: "evening" as const
+            },
+            {
+              type: "breathwork" as const,
+              title: "4-7-8 breathing before sleep",
+              rationale: "This technique activates the relaxation response and prepares your body for rest",
+              time_suggestion: "evening" as const
+            }
+          ],
+          reflection_prompt: "What changes did you notice in your sleep quality?"
         }
       ]
     }
@@ -468,15 +526,19 @@ async function savePlanToDatabase(userId: string, planData: PlanPayload): Promis
 
     const planId = planResult.id;
 
-    // Insert recovery plan tasks
-    const tasks = planData.days.map(day => ({
-      plan_id: planId,
-      user_id: userId,
-      date: day.date,
-      action: day.action,
-      rationale: day.rationale,
-      category: day.category
-    }));
+    // Insert recovery plan tasks (flattened from multi-task days)
+    const tasks = planData.days.flatMap(day => 
+      day.tasks.map(task => ({
+        plan_id: planId,
+        user_id: userId,
+        date: day.date,
+        action: task.title,
+        rationale: task.rationale,
+        category: task.type,
+        time_suggestion: task.time_suggestion || null,
+        recipe_id: task.recipe_id || null
+      }))
+    );
 
     const { error: tasksError } = await supabaseAdmin
       .from('recovery_plan_tasks')
@@ -484,6 +546,28 @@ async function savePlanToDatabase(userId: string, planData: PlanPayload): Promis
 
     if (tasksError) {
       throw tasksError;
+    }
+
+    // Insert reflection prompts if provided
+    const reflections = planData.days
+      .filter(day => day.reflection_prompt)
+      .map(day => ({
+        user_id: userId,
+        plan_id: planId,
+        day: day.date,
+        prompt: day.reflection_prompt!,
+        reflection_text: null
+      }));
+
+    if (reflections.length > 0) {
+      const { error: reflectionsError } = await supabaseAdmin
+        .from('recovery_plan_reflections')
+        .insert(reflections);
+
+      if (reflectionsError) {
+        console.warn('Error saving reflections:', reflectionsError);
+        // Don't fail the entire operation if reflections fail
+      }
     }
 
     console.log(`Recovery plan created successfully for user ${userId}: ${planId}`);
@@ -536,6 +620,8 @@ export async function getCurrentPlan(userId: string) {
           action,
           rationale,
           category,
+          time_suggestion,
+          recipe_id,
           completed
         )
       `)
@@ -548,7 +634,17 @@ export async function getCurrentPlan(userId: string) {
       return null;
     }
 
-    return plan;
+    // Also get reflections for this plan
+    const { data: reflections } = await supabaseAdmin
+      .from('recovery_plan_reflections')
+      .select('*')
+      .eq('plan_id', plan.id)
+      .eq('user_id', userId);
+
+    return {
+      ...plan,
+      recovery_plan_reflections: reflections || []
+    };
   } catch (error) {
     console.error('Error getting current plan:', error);
     return null;
@@ -568,6 +664,8 @@ export async function getTodaysTask(userId: string) {
         action,
         rationale,
         category,
+        time_suggestion,
+        recipe_id,
         completed,
         recovery_plans!inner(id, title)
       `)

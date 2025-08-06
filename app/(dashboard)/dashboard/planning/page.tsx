@@ -12,6 +12,7 @@ type RecoveryPlan = {
   end_date: string;
   created_at: string | null;
   recovery_plan_tasks: RecoveryPlanTask[];
+  recovery_plan_reflections: RecoveryPlanReflection[];
 };
 
 type RecoveryPlanTask = {
@@ -20,7 +21,19 @@ type RecoveryPlanTask = {
   action: string;
   rationale: string | null;
   category: string | null;
+  time_suggestion: string | null;
+  recipe_id: string | null;
   completed: boolean | null;
+};
+
+type RecoveryPlanReflection = {
+  id: string;
+  day: string;
+  prompt: string;
+  reflection_text: string | null;
+  plan_id: string | null;
+  user_id: string | null;
+  created_at: string | null;
 };
 
 // Client component for interactive elements
@@ -76,23 +89,43 @@ export default async function PlanningPage() {
     }
   };
 
-  const isTaskDate = (task: RecoveryPlanTask) => {
-    const today = new Date().toISOString().split('T')[0];
-    const taskDate = task.date;
-    const isPast = taskDate < today;
-    const isToday = taskDate === today;
-    const isFuture = taskDate > today;
-    
-    return { isPast, isToday, isFuture };
+  const getTimeIcon = (timeSuggestion: string | null) => {
+    switch (timeSuggestion) {
+      case 'morning': return '☀️';
+      case 'afternoon': return '🌅';
+      case 'evening': return '🌙';
+      case 'flexible': return '⏰';
+      default: return '⏰';
+    }
   };
 
+  // Group tasks by date for multi-task daily view
+  const groupTasksByDate = (tasks: RecoveryPlanTask[]) => {
+    const grouped = tasks.reduce((acc, task) => {
+      if (!acc[task.date]) {
+        acc[task.date] = [];
+      }
+      acc[task.date].push(task);
+      return acc;
+    }, {} as Record<string, RecoveryPlanTask[]>);
+    
+    return Object.entries(grouped)
+      .sort(([a], [b]) => a.localeCompare(b))
+      .map(([date, tasks]) => ({
+        date,
+        tasks: tasks.sort((a, b) => (a.time_suggestion || 'flexible').localeCompare(b.time_suggestion || 'flexible'))
+      }));
+  };
+
+
+
   return (
-    <div className="min-h-screen bg-gradient-to-br from-green-50 to-blue-50 p-4">
-      <div className="max-w-4xl mx-auto space-y-6">
+    <div className="min-h-screen bg-white px-4 sm:px-8 py-8">
+      <div className="max-w-6xl mx-auto space-y-8">
         {/* Header */}
         <div className="text-center space-y-2">
-          <h1 className="text-3xl font-bold text-gray-900">Recovery Planning</h1>
-          <p className="text-gray-600">Your personalized path to wellness and recovery</p>
+          <h1 className="text-2xl sm:text-3xl font-logo font-bold text-neutral-900">Recovery Planning</h1>
+          <p className="text-neutral-600">Your personalized path to wellness and recovery</p>
         </div>
 
         {currentPlan ? (
@@ -113,14 +146,14 @@ export default async function PlanningPage() {
                   </div>
                 </div>
                 
-                <div className="flex items-center gap-6 text-sm text-gray-600 mt-4">
+                <div className="flex items-center gap-6 text-sm text-neutral-600 mt-4">
                   <div className="flex items-center gap-2">
                     <Calendar className="w-4 h-4" />
                     <span>{formatDate(currentPlan.start_date)} → {formatDate(currentPlan.end_date)}</span>
                   </div>
                   <div className="flex items-center gap-2">
                     <Clock className="w-4 h-4" />
-                    <span>{currentPlan.recovery_plan_tasks.length} days</span>
+                    <span>{groupTasksByDate(currentPlan.recovery_plan_tasks).length} days</span>
                   </div>
                 </div>
 
@@ -134,77 +167,153 @@ export default async function PlanningPage() {
               </CardHeader>
             </Card>
 
-            {/* Daily Tasks */}
-            <Card className="border-0 shadow-lg">
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2">
-                  <CheckCircle2 className="w-5 h-5 text-green-600" />
-                  Daily Recovery Tasks
-                </CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-4">
-                {currentPlan.recovery_plan_tasks
-                  .sort((a, b) => a.date.localeCompare(b.date))
-                  .map((task) => {
-                    const { isPast, isToday } = isTaskDate(task);
-                    
-                    return (
-                      <div
-                        key={task.id}
-                        className={`
-                          border rounded-lg p-4 transition-all duration-200
-                          ${task.completed 
-                            ? 'bg-green-50 border-green-200' 
-                            : isToday 
-                              ? 'bg-blue-50 border-blue-200 ring-2 ring-blue-200' 
-                              : isPast 
-                                ? 'bg-gray-50 border-gray-200' 
-                                : 'bg-white border-gray-200'
-                          }
-                          ${isToday ? 'shadow-md' : 'shadow-sm'}
-                        `}
-                      >
-                        <div className="flex items-start gap-3">
-                          <div className="mt-1">
-                            {task.completed ? (
-                              <CheckCircle2 className="w-5 h-5 text-green-600" />
-                            ) : (
-                              <Circle className={`w-5 h-5 ${isToday ? 'text-blue-600' : 'text-gray-400'}`} />
-                            )}
+            {/* Daily Plans - Horizontal Scrollable Cards */}
+            <div className="space-y-6">
+              <div className="flex items-center gap-2">
+                <CheckCircle2 className="w-5 h-5 text-green-600" />
+                <h2 className="text-xl font-semibold text-neutral-900">Daily Recovery Plans</h2>
+              </div>
+              
+              <div className="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-3 gap-6">
+                {groupTasksByDate(currentPlan.recovery_plan_tasks).map((dayPlan) => {
+                  const today = new Date().toISOString().split('T')[0];
+                  const isPast = dayPlan.date < today;
+                  const isToday = dayPlan.date === today;
+                  
+                  const completedTasks = dayPlan.tasks.filter(task => task.completed).length;
+                  const totalTasks = dayPlan.tasks.length;
+                  const progressPercent = Math.round((completedTasks / totalTasks) * 100);
+                  
+                  const dayReflection = currentPlan.recovery_plan_reflections?.find(
+                    reflection => reflection.day === dayPlan.date
+                  );
+                  
+                  return (
+                    <Card 
+                      key={dayPlan.date}
+                      className={`
+                        rounded-2xl shadow-sm transition-all duration-200 hover:shadow-md
+                        ${isToday 
+                          ? 'ring-2 ring-blue-200 bg-blue-50 border-blue-200' 
+                          : completedTasks === totalTasks && totalTasks > 0
+                            ? 'bg-green-50 border-green-200'
+                            : 'bg-white border-neutral-200'
+                        }
+                      `}
+                    >
+                      <CardHeader className="pb-4">
+                        <div className="flex items-center justify-between">
+                          <div>
+                            <CardTitle className="text-lg text-neutral-900">
+                              🗓️ {formatDate(dayPlan.date).split(',')[0]}
+                            </CardTitle>
+                            <p className="text-sm text-neutral-600 mt-1">
+                              {formatDate(dayPlan.date).split(',')[1]?.trim()}
+                            </p>
                           </div>
-                          
-                          <div className="flex-1 space-y-2">
-                            <div className="flex items-center justify-between">
-                              <div className="flex items-center gap-3">
-                                <span className="text-sm font-medium text-gray-900">
-                                  {formatDate(task.date)}
-                                </span>
-                                {isToday && (
-                                  <span className="px-2 py-1 bg-blue-100 text-blue-700 text-xs font-medium rounded-full">
-                                    Today
-                                  </span>
-                                )}
-                                <span className={`px-2 py-1 text-xs font-medium rounded-full border ${getCategoryColor(task.category || 'default')}`}>
-                                  {getCategoryIcon(task.category || 'default')} {task.category || 'general'}
-                                </span>
+                          {isToday && (
+                            <span className="px-3 py-1 bg-blue-100 text-blue-700 text-xs font-medium rounded-full">
+                              Today
+                            </span>
+                          )}
+                        </div>
+                        
+                        {/* Progress Indicator */}
+                        <div className="flex items-center gap-2 mt-3">
+                          <div className="text-sm text-neutral-600">
+                            ✅ {completedTasks} of {totalTasks} tasks complete
+                          </div>
+                          {progressPercent === 100 && totalTasks > 0 && (
+                            <span className="text-green-600">🎉</span>
+                          )}
+                        </div>
+                        
+                        <div className="w-full bg-neutral-200 rounded-full h-2 mt-2">
+                          <div 
+                            className={`h-2 rounded-full transition-all duration-300 ${
+                              progressPercent === 100 ? 'bg-green-500' : 'bg-blue-500'
+                            }`}
+                            style={{ width: `${progressPercent}%` }}
+                          ></div>
+                        </div>
+                      </CardHeader>
+                      
+                      <CardContent className="space-y-4">
+                        {/* Tasks List */}
+                        <div className="space-y-3">
+                          {dayPlan.tasks.map((task) => (
+                            <div
+                              key={task.id}
+                              className={`
+                                border rounded-xl p-3 transition-all duration-200
+                                ${task.completed 
+                                  ? 'bg-green-50 border-green-200' 
+                                  : 'bg-white border-neutral-200 hover:border-neutral-300'
+                                }
+                              `}
+                            >
+                              <div className="flex items-start gap-3">
+                                <div className="mt-0.5">
+                                  {task.completed ? (
+                                    <CheckCircle2 className="w-4 h-4 text-green-600" />
+                                  ) : (
+                                    <Circle className="w-4 h-4 text-neutral-400" />
+                                  )}
+                                </div>
+                                
+                                <div className="flex-1 space-y-2">
+                                  <div className="flex items-center gap-2 flex-wrap">
+                                    <span className={`px-2 py-1 text-xs font-medium rounded-lg border ${getCategoryColor(task.category || 'default')}`}>
+                                      {getCategoryIcon(task.category || 'default')} {task.category || 'general'}
+                                    </span>
+                                    {task.time_suggestion && (
+                                      <span className="px-2 py-1 bg-neutral-100 text-neutral-600 text-xs rounded-lg">
+                                        {getTimeIcon(task.time_suggestion)} {task.time_suggestion}
+                                      </span>
+                                    )}
+                                  </div>
+                                  
+                                  <div>
+                                    <h4 className="font-medium text-neutral-900 text-sm mb-1">{task.action}</h4>
+                                    <p className="text-xs text-neutral-600">{task.rationale}</p>
+                                  </div>
+                                  
+                                  {isToday && !task.completed && (
+                                    <PlanningActions taskId={task.id} />
+                                  )}
+                                </div>
                               </div>
                             </div>
-                            
-                            <div>
-                              <h4 className="font-medium text-gray-900 mb-1">{task.action}</h4>
-                              <p className="text-sm text-gray-600">{task.rationale}</p>
-                            </div>
-                            
-                            {isToday && !task.completed && (
-                              <PlanningActions taskId={task.id} />
-                            )}
-                          </div>
+                          ))}
                         </div>
-                      </div>
-                    );
-                  })}
-              </CardContent>
-            </Card>
+                        
+                        {/* Reflection Section */}
+                        {dayReflection && (
+                          <div className="border-t border-neutral-200 pt-4">
+                            <div className="space-y-3">
+                              <div className="flex items-center gap-2">
+                                <span className="text-sm font-medium text-neutral-700">✍️ Daily Reflection</span>
+                              </div>
+                              <p className="text-sm text-neutral-600 italic">&ldquo;{dayReflection.prompt}&rdquo;</p>
+                              
+                              {isPast || isToday ? (
+                                <PlanningActions 
+                                  reflectionId={dayReflection.id} 
+                                  currentReflection={dayReflection.reflection_text}
+                                  reflectionPrompt={dayReflection.prompt}
+                                />
+                              ) : (
+                                <p className="text-xs text-neutral-500">Available after {formatDate(dayPlan.date).split(',')[0]}</p>
+                              )}
+                            </div>
+                          </div>
+                        )}
+                      </CardContent>
+                    </Card>
+                  );
+                })}
+              </div>
+            </div>
 
             {/* Plan Actions */}
             <Card className="border-0 shadow-lg">

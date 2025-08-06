@@ -217,6 +217,8 @@ export type Database = {
           id: string
           plan_id: string | null
           rationale: string | null
+          time_suggestion: string | null
+          recipe_id: string | null
           user_id: string | null
         }
         Insert: {
@@ -228,6 +230,8 @@ export type Database = {
           id?: string
           plan_id?: string | null
           rationale?: string | null
+          time_suggestion?: string | null
+          recipe_id?: string | null
           user_id?: string | null
         }
         Update: {
@@ -239,11 +243,51 @@ export type Database = {
           id?: string
           plan_id?: string | null
           rationale?: string | null
+          time_suggestion?: string | null
+          recipe_id?: string | null
           user_id?: string | null
         }
         Relationships: [
           {
             foreignKeyName: "recovery_plan_tasks_plan_id_fkey"
+            columns: ["plan_id"]
+            isOneToOne: false
+            referencedRelation: "recovery_plans"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      recovery_plan_reflections: {
+        Row: {
+          created_at: string | null
+          day: string
+          id: string
+          plan_id: string | null
+          prompt: string
+          reflection_text: string | null
+          user_id: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          day: string
+          id?: string
+          plan_id?: string | null
+          prompt: string
+          reflection_text?: string | null
+          user_id?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          day?: string
+          id?: string
+          plan_id?: string | null
+          prompt?: string
+          reflection_text?: string | null
+          user_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "recovery_plan_reflections_plan_id_fkey"
             columns: ["plan_id"]
             isOneToOne: false
             referencedRelation: "recovery_plans"

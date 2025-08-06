@@ -1,9 +1,10 @@
 'use client'
 
 import { Button } from '@/components/ui/button'
-import { User as UserIcon, Home, LogOut, Settings, Menu, X, Calendar } from 'lucide-react'
+import { User as UserIcon, Home, LogOut, Settings, Menu, X, Clipboard, TrendingUp } from 'lucide-react'
 import Link from 'next/link'
 import { useState } from 'react'
+import { usePathname } from 'next/navigation'
 import { createClient } from '@/utils/supabase/client'
 import type { User } from '@supabase/supabase-js'
 
@@ -13,6 +14,7 @@ interface DashboardNavProps {
 
 export default function DashboardNav({ user }: DashboardNavProps) {
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false)
+  const pathname = usePathname()
 
   const handleLogout = async () => {
     const supabase = createClient()
@@ -40,24 +42,57 @@ export default function DashboardNav({ user }: DashboardNavProps) {
             </div>
 
             {/* Desktop Navigation */}
-            <div className="hidden md:flex items-center gap-3">
+            <div className="hidden md:flex items-center gap-1">
               <Link href="/dashboard">
-                <Button variant="outline" size="sm" className="flex items-center gap-2">
+                <div 
+                  className={`flex items-center gap-2 px-3 py-2 text-sm font-medium rounded-md transition-colors hover:bg-neutral-50 ${
+                    pathname === '/dashboard' 
+                      ? 'text-neutral-900 border-b-2 border-neutral-900 rounded-b-none' 
+                      : 'text-neutral-600'
+                  }`}
+                  title="Your Daily Pulse"
+                >
                   <Home className="w-4 h-4" />
-                  Home
-                </Button>
+                  Observe
+                </div>
               </Link>
               <Link href="/dashboard/planning">
-                <Button variant="outline" size="sm" className="flex items-center gap-2">
-                  <Calendar className="w-4 h-4" />
-                  Recovery Plans
-                </Button>
+                <div 
+                  className={`flex items-center gap-2 px-3 py-2 text-sm font-medium rounded-md transition-colors hover:bg-neutral-50 ${
+                    pathname === '/dashboard/planning' 
+                      ? 'text-neutral-900 border-b-2 border-neutral-900 rounded-b-none' 
+                      : 'text-neutral-600'
+                  }`}
+                  title="Personalized Recovery Plan"
+                >
+                  <Clipboard className="w-4 h-4" />
+                  Act
+                </div>
+              </Link>
+              <Link href="/dashboard/progress">
+                <div 
+                  className={`flex items-center gap-2 px-3 py-2 text-sm font-medium rounded-md transition-colors hover:bg-neutral-50 ${
+                    pathname === '/dashboard/progress' 
+                      ? 'text-neutral-900 border-b-2 border-neutral-900 rounded-b-none' 
+                      : 'text-neutral-600'
+                  }`}
+                  title="Progress & Mood Trends"
+                >
+                  <TrendingUp className="w-4 h-4" />
+                  Reflect
+                </div>
               </Link>
               <Link href="/dashboard/settings">
-                <Button variant="outline" size="sm" className="flex items-center gap-2">
+                <div 
+                  className={`flex items-center gap-2 px-3 py-2 text-sm font-medium rounded-md transition-colors hover:bg-neutral-50 ${
+                    pathname === '/dashboard/settings' 
+                      ? 'text-neutral-900 border-b-2 border-neutral-900 rounded-b-none' 
+                      : 'text-neutral-600'
+                  }`}
+                >
                   <Settings className="w-4 h-4" />
                   Settings
-                </Button>
+                </div>
               </Link>
             </div>
           </div>
@@ -105,23 +140,39 @@ export default function DashboardNav({ user }: DashboardNavProps) {
             <div className="px-4 py-4 space-y-3">
               <Link 
                 href="/dashboard"
-                className="flex items-center gap-3 px-3 py-2 text-sm text-neutral-700 hover:bg-neutral-50 rounded-md transition-colors"
+                className={`flex items-center gap-3 px-3 py-2 text-sm hover:bg-neutral-50 rounded-md transition-colors ${
+                  pathname === '/dashboard' ? 'text-neutral-900 font-medium border-l-2 border-neutral-900' : 'text-neutral-700'
+                }`}
                 onClick={() => setIsMobileMenuOpen(false)}
               >
                 <Home className="w-4 h-4" />
-                Home
+                Observe
               </Link>
               <Link 
                 href="/dashboard/planning"
-                className="flex items-center gap-3 px-3 py-2 text-sm text-neutral-700 hover:bg-neutral-50 rounded-md transition-colors"
+                className={`flex items-center gap-3 px-3 py-2 text-sm hover:bg-neutral-50 rounded-md transition-colors ${
+                  pathname === '/dashboard/planning' ? 'text-neutral-900 font-medium border-l-2 border-neutral-900' : 'text-neutral-700'
+                }`}
                 onClick={() => setIsMobileMenuOpen(false)}
               >
-                <Calendar className="w-4 h-4" />
-                Recovery Plans
+                <Clipboard className="w-4 h-4" />
+                Act
+              </Link>
+              <Link 
+                href="/dashboard/progress"
+                className={`flex items-center gap-3 px-3 py-2 text-sm hover:bg-neutral-50 rounded-md transition-colors ${
+                  pathname === '/dashboard/progress' ? 'text-neutral-900 font-medium border-l-2 border-neutral-900' : 'text-neutral-700'
+                }`}
+                onClick={() => setIsMobileMenuOpen(false)}
+              >
+                <TrendingUp className="w-4 h-4" />
+                Reflect
               </Link>
               <Link 
                 href="/dashboard/settings"
-                className="flex items-center gap-3 px-3 py-2 text-sm text-neutral-700 hover:bg-neutral-50 rounded-md transition-colors"
+                className={`flex items-center gap-3 px-3 py-2 text-sm hover:bg-neutral-50 rounded-md transition-colors ${
+                  pathname === '/dashboard/settings' ? 'text-neutral-900 font-medium border-l-2 border-neutral-900' : 'text-neutral-700'
+                }`}
                 onClick={() => setIsMobileMenuOpen(false)}
               >
                 <Settings className="w-4 h-4" />
