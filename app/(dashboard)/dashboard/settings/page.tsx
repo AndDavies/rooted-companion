@@ -1,15 +1,95 @@
-import type { Metadata } from "next";
+'use client';
+
+import { useEffect, useState } from "react";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Switch } from "@/components/ui/switch";
 import { Watch, User, Shield, Bell, Heart } from "lucide-react";
-
-export const metadata: Metadata = {
-  title: "Settings - ROOTED Way Companion",
-  description: "Manage your account settings and preferences",
-};
+import { createClient } from "@/utils/supabase/client";
 
 export default function SettingsPage() {
+  const [dailyEmail, setDailyEmail] = useState(false);
+  const [weeklyEmail, setWeeklyEmail] = useState(false);
+  const [loading, setLoading] = useState(true);
+  const [saving, setSaving] = useState(false);
+  const [userId, setUserId] = useState<string | null>(null);
+
+  const supabase = createClient();
+
+  useEffect(() => {
+    const loadUserAndSettings = async () => {
+      try {
+        // Get current user
+        const { data: { user }, error: userError } = await supabase.auth.getUser();
+        
+        if (userError || !user) {
+          console.error('User not authenticated');
+          return;
+        }
+
+        setUserId(user.id);
+
+        // Load user settings
+        const { data: userData, error: settingsError } = await supabase
+          .from('users')
+          .select('receive_daily_email, receive_weekly_email')
+          .eq('id', user.id)
+          .single();
+
+        if (settingsError) {
+          console.error('Error loading settings:', settingsError);
+          return;
+        }
+
+        setDailyEmail(userData?.receive_daily_email ?? false);
+        setWeeklyEmail(userData?.receive_weekly_email ?? false);
+      } catch (error) {
+        console.error('Error loading user settings:', error);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    loadUserAndSettings();
+  }, [supabase]);
+
+  const updateEmailSetting = async (setting: 'daily' | 'weekly', checked: boolean) => {
+    if (!userId) return;
+
+    setSaving(true);
+    try {
+      const updateData = setting === 'daily' 
+        ? { receive_daily_email: checked }
+        : { receive_weekly_email: checked };
+
+      const { error } = await supabase
+        .from('users')
+        .update(updateData)
+        .eq('id', userId);
+
+      if (error) {
+        console.error('Error updating setting:', error);
+        // Revert the state change on error
+        if (setting === 'daily') {
+          setDailyEmail(!checked);
+        } else {
+          setWeeklyEmail(!checked);
+        }
+      }
+    } catch (error) {
+      console.error('Error updating email setting:', error);
+      // Revert the state change on error
+      if (setting === 'daily') {
+        setDailyEmail(!checked);
+      } else {
+        setWeeklyEmail(!checked);
+      }
+    } finally {
+      setSaving(false);
+    }
+  };
+
   return (
     <div className="space-y-8">
       {/* Page Header */}
@@ -121,9 +201,53 @@ export default function SettingsPage() {
             </CardDescription>
           </CardHeader>
           <CardContent>
-            <Button variant="outline" className="w-full transition-all duration-200" disabled>
-              Coming Soon
-            </Button>
+            {loading ? (
+              <div className="space-y-4">
+                <div className="flex items-center justify-between">
+                  <span className="text-neutral-600">Loading settings...</span>
+                  <div className="w-6 h-6 border-2 border-neutral-300 border-t-neutral-600 rounded-full animate-spin"></div>
+                </div>
+              </div>
+            ) : (
+              <div className="space-y-4">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <span className="font-medium text-neutral-900">Receive Daily Email</span>
+                    <p className="text-sm text-neutral-600">Get your daily recovery pulse</p>
+                  </div>
+                  <Switch
+                    checked={dailyEmail}
+                    onCheckedChange={(checked: boolean) => {
+                      setDailyEmail(checked);
+                      updateEmailSetting('daily', checked);
+                    }}
+                    disabled={saving}
+                  />
+                </div>
+
+                <div className="flex items-center justify-between">
+                  <div>
+                    <span className="font-medium text-neutral-900">Receive Weekly Email</span>
+                    <p className="text-sm text-neutral-600">Weekly progress summary</p>
+                  </div>
+                  <Switch
+                    checked={weeklyEmail}
+                    onCheckedChange={(checked: boolean) => {
+                      setWeeklyEmail(checked);
+                      updateEmailSetting('weekly', checked);
+                    }}
+                    disabled={saving}
+                  />
+                </div>
+
+                {saving && (
+                  <div className="flex items-center gap-2 text-sm text-neutral-600">
+                    <div className="w-4 h-4 border-2 border-neutral-300 border-t-neutral-600 rounded-full animate-spin"></div>
+                    Saving...
+                  </div>
+                )}
+              </div>
+            )}
           </CardContent>
         </Card>
       </div>
