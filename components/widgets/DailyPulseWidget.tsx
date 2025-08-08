@@ -57,7 +57,7 @@ export function DailyPulseWidget() {
   const [suggestion, setSuggestion] = useState<SuggestionData>(null);
   const [moodReflection, setMoodReflection] = useState<MoodReflection>(null);
   const [loading, setLoading] = useState(true);
-  const [generating, setGenerating] = useState(false);
+  // const [generating, setGenerating] = useState(false);
   const [errorState, setErrorState] = useState<null | { code: string; stage: string; message: string }>(null);
   const conflictRetriedRef = useRef(false);
   const [retrying, setRetrying] = useState(false);
@@ -101,7 +101,7 @@ export function DailyPulseWidget() {
       const timeout = setTimeout(() => {
         setErrorState({ code: 'OPENAI_TIMEOUT', stage: 'suggestion_fetch', message: 'Timed out' });
       }, 10000);
-      const result = await getDailySuggestion({ autoGenerate: true } as any);
+      const result = await getDailySuggestion({ autoGenerate: true });
       clearTimeout(timeout);
 
       if (result && result.success) {
@@ -124,8 +124,8 @@ export function DailyPulseWidget() {
         setSuggestion(null);
       }
       
-      if ((result as any)?.success && (result as any).suggestion?.id) {
-        const reflection = await getMoodReflection((result as any).suggestion.id);
+      if (result?.success && result.suggestion?.id) {
+        const reflection = await getMoodReflection(result.suggestion.id);
         setMoodReflection(reflection);
         if (reflection) {
           setSelectedMoodEmoji(reflection.mood_emoji || '');
@@ -334,9 +334,9 @@ export function DailyPulseWidget() {
               <span className="font-medium text-gray-700">Why this helps: </span>
               {suggestion.rationale}
             </div>
-            {('evidence_note' in (suggestion as any)) && (suggestion as any).evidence_note && (
+            {('evidence_note' in (suggestion as unknown as { evidence_note?: string | null })) && (suggestion as any).evidence_note && (
               <div className="text-xs text-gray-500 opacity-80">
-                Evidence note: {(suggestion as any).evidence_note}
+                Evidence note: {(suggestion as unknown as { evidence_note?: string | null }).evidence_note}
               </div>
             )}
           </div>

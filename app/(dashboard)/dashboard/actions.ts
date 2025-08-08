@@ -4,10 +4,7 @@ import { createClientForActions } from '@/utils/supabase/server';
 import { redirect } from 'next/navigation';
 import { revalidatePath } from 'next/cache';
 import { supabaseAdmin } from '@/utils/supabase/admin';
-import { toUserLocalDate } from '@/lib/db/dates';
 import { getOrCreateTodaysSuggestion } from '@/lib/suggestions/service';
-
-type ServerError = { code: 'OPENAI_TIMEOUT'|'OPENAI_ERROR'|'DB_ERROR'|'PARSE_ERROR'|'UNKNOWN'|'UNAUTH'|'NO_PLAN_TASK'|'DB_CONFLICT'|'OPENAI_RATE_LIMIT', stage: 'biometrics'|'prompt'|'openai'|'parse'|'db'|'unknown'|'suggestion_fetch'|'plan_fetch', message: string }
 
 export async function getDailySuggestion({ autoGenerate = true }: { autoGenerate?: boolean } = {}) {
   const res = await getOrCreateTodaysSuggestion({ forceCreate: autoGenerate, source: 'auto' });

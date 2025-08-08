@@ -53,12 +53,27 @@ export async function getOrCreateTodaysSuggestion(opts?: { forceCreate?: boolean
     const row = await generateDailySuggestion(user.id, { source: opts?.source ?? 'api' });
     return { success: true, suggestion: mapRow(row) };
 
-  } catch (e: any) {
-    return { success: false, error: { code: e?.code ?? 'UNKNOWN', stage: e?.stage ?? 'service', message: e?.message ?? 'Unexpected error' } };
+  } catch (e: unknown) {
+    const err = e as { code?: string; stage?: string; message?: string };
+    return { success: false, error: { code: err?.code ?? 'UNKNOWN', stage: err?.stage ?? 'service', message: err?.message ?? 'Unexpected error' } };
   }
 }
 
-function mapRow(r: any): SuggestionDTO {
+function mapRow(r: {
+  id: string;
+  suggestion: { action?: string; category?: SuggestionDTO['category']; rationale?: string } | null;
+  recovery_score?: number;
+  wearable_data?: unknown;
+  completed?: boolean;
+  created_at?: string;
+  suggestion_date?: string;
+  data_used?: SuggestionDTO['dataUsed'];
+  trend?: SuggestionDTO['trend'];
+  focus_used?: SuggestionDTO['focusUsed'];
+  source?: SuggestionDTO['source'];
+  evidence_note?: string | null;
+  kb_doc_ids?: unknown;
+}): SuggestionDTO {
   const s = r.suggestion ?? {};
   const dataUsed = r.data_used as SuggestionDTO['dataUsed'] | undefined;
   const wearableUsed = typeof dataUsed === 'string'
@@ -68,10 +83,10 @@ function mapRow(r: any): SuggestionDTO {
   return {
     id: r.id,
     action: s.action ?? '',
-    category: (s.category ?? 'mindset'),
+    category: (s.category ?? 'mindset') as SuggestionDTO['category'],
     rationale: s.rationale ?? '',
     evidence_note: r.evidence_note ?? s.evidence_note ?? null,
-    kbDocIds: Array.isArray(r.kb_doc_ids) ? r.kb_doc_ids : [],
+    kbDocIds: Array.isArray(r.kb_doc_ids as unknown[]) ? (r.kb_doc_ids as string[]) : [],
     recoveryScore: Number(r.recovery_score ?? 0),
     wearableUsed,
     completed: Boolean(r.completed),

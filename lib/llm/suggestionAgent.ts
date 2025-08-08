@@ -4,7 +4,7 @@ import { supabaseAdmin } from "@/utils/supabase/admin";
 import { toUserLocalDate } from "@/lib/db/dates";
 import { tryAcquireUserDayLock, releaseUserDayLock } from "@/lib/db/locks";
 import { buildSpec, decideDataUsed, SuggestionSpec, Trend, Focus } from "@/lib/suggestions/spec";
-import { computeProgression, HistoryPoint, Progression } from "@/lib/suggestions/progression";
+import { computeProgression, HistoryPoint } from "@/lib/suggestions/progression";
 
 // Types
 export type SuggestionPayload = {
@@ -272,8 +272,10 @@ export async function generateDailySuggestion(
 
       if (error || !data) return [];
 
-      const ids = data.map((r: any) => r.id);
-      if (ids.length === 0) return data.map((r: any) => ({ completed: Boolean(r.completed) }));
+      type Row = { id: string; completed: boolean | null; created_at: string | null };
+      const rows = data as Row[];
+      const ids = rows.map((r) => r.id);
+      if (ids.length === 0) return rows.map((r) => ({ completed: Boolean(r.completed) }));
 
       const { data: moods } = await supabaseAdmin
         .from('mood_reflections')
@@ -281,8 +283,10 @@ export async function generateDailySuggestion(
         .in('suggestion_id', ids);
 
       const idToMood: Record<string, string | null> = {};
-      (moods || []).forEach((m: any) => {
-        idToMood[m.suggestion_id] = m.mood_emoji ?? null;
+      (moods as { suggestion_id: string | null; mood_emoji: string | null }[] | null || []).forEach((m) => {
+        if (m && m.suggestion_id) {
+          idToMood[m.suggestion_id] = m.mood_emoji ?? null;
+        }
       });
 
       const mapEmoji = (emoji: string | null | undefined): HistoryPoint['mood'] => {
@@ -294,7 +298,7 @@ export async function generateDailySuggestion(
         return null;
       };
 
-      return data.map((r: any) => ({
+      return rows.map((r) => ({
         completed: Boolean(r.completed),
         mood: mapEmoji(idToMood[r.id]),
       }));
@@ -357,7 +361,7 @@ Rules:
     ].filter(Boolean).join('; ');
 
     let snippetsBlock = '';
-    let kbDocIds: string[] = [];
+    const kbDocIds: string[] = [];
     try {
       const { retrieveEvidenceSnippets } = await import('@/lib/kb/retriever');
       const queryText = `theme:${spec.theme}; intensity:${spec.intensity}; minutes:${spec.durationMin}; focus:${preferred_focus ?? 'none'}; ${compactSummary}`;
@@ -370,7 +374,7 @@ Rules:
         });
         snippetsBlock = `\n\nEVIDENCE SNIPPETS (use to ground rationale & evidence_note):\n${lines.join('\n')}`;
       }
-    } catch (e) {
+    } catch {
       // On any KB error, continue without snippets
     }
 
@@ -390,7 +394,7 @@ Return ONLY JSON, no prose.`;
     const response = await model.invoke(messages);
     const responseText = String(response.content ?? '');
 
-    let suggestionData: any | null = null;
+    let suggestionData: Record<string, unknown> | null = null;
     try {
       const jsonMatch = responseText.match(/\{[\s\S]*\}/);
       suggestionData = jsonMatch ? JSON.parse(jsonMatch[0]) : null;
@@ -400,18 +404,18 @@ Return ONLY JSON, no prose.`;
 
     let suggestion: SuggestionPayload;
     if (suggestionData && typeof suggestionData === 'object') {
-      const rawCategory = String(suggestionData.category ?? '').toLowerCase();
-      const category: SuggestionPayload['category'] =
-        ['movement', 'breathwork', 'mindset', 'nutrition'].includes(rawCategory)
-          ? (rawCategory as any)
-          : spec.theme;
+      const rawCategory = String((suggestionData as { category?: string }).category ?? '').toLowerCase();
+      const allowed = ['movement', 'breathwork', 'mindset', 'nutrition'] as const;
+      const isAllowed = (val: string): val is SuggestionPayload['category'] =>
+        (allowed as readonly string[]).includes(val);
+      const category: SuggestionPayload['category'] = isAllowed(rawCategory) ? rawCategory : spec.theme;
       suggestion = {
         action: String(suggestionData.action ?? '').trim() || 'Take 5 deep breaths and stretch gently',
         category,
         rationale:
-          String(suggestionData.rationale ?? '').trim() ||
+          String((suggestionData as { rationale?: string }).rationale ?? '').trim() ||
           `Based on your recovery score of ${recoveryScore}/100, this will help support your wellness today.`,
-        evidence_note: suggestionData.evidence_note ? String(suggestionData.evidence_note) : undefined,
+        evidence_note: (suggestionData as { evidence_note?: string | null | undefined }).evidence_note ? String((suggestionData as { evidence_note?: string | null | undefined }).evidence_note) : undefined,
         recoveryScore,
         wearableUsed: hasWearable,
       };
@@ -468,9 +472,21 @@ Return ONLY JSON, no prose.`;
       throw insertError;
     }
 
-    return inserted as any;
+    return inserted as {
+      id: string;
+      suggestion: { action: string; category: SuggestionPayload['category']; rationale: string };
+      recovery_score: number;
+      created_at: string;
+      data_used: 'wearable' | 'onboarding' | 'both' | 'none';
+      trend: Trend;
+      focus_used: Focus | null;
+      source: 'auto' | 'manual' | 'api';
+      evidence_note: string | null;
+      suggestion_date: string;
+      kb_doc_ids?: string[];
+    };
 
-  } catch (error) {
+  } catch (error: unknown) {
     console.error('Error in generateDailySuggestion:', error);
     // Last-resort: try to fetch today if unique constraint hit elsewhere
     try {
