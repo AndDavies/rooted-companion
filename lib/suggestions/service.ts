@@ -45,11 +45,20 @@ export async function getOrCreateTodaysSuggestion(opts?: { forceCreate?: boolean
     if (readErr) {
       return { success: false, error: { code: 'DB_ERROR', stage: 'read_today', message: readErr.message } };
     }
-    if (existing && !opts?.forceCreate) {
+    if (existing) {
+      // Always return today's existing row; avoid regenerating/updating
+      if (process.env.NODE_ENV !== 'production') {
+        // eslint-disable-next-line no-console
+        console.debug('[suggestion] using existing for today', { id: existing.id });
+      }
       return { success: true, suggestion: mapRow(existing) };
     }
 
-    // 2) Generate (conflict-safe upsert inside generator)
+    // 2) Generate only when missing
+    if (process.env.NODE_ENV !== 'production') {
+      // eslint-disable-next-line no-console
+      console.debug('[suggestion] generating new for today', { forceCreate: !!opts?.forceCreate, source: opts?.source });
+    }
     const row = await generateDailySuggestion(user.id, { source: opts?.source ?? 'api' });
     return { success: true, suggestion: mapRow(row) };
 

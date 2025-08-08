@@ -437,10 +437,8 @@ Return ONLY JSON, no prose.`;
     };
     suggestion.evidence_note = sanitizeEvidence(suggestion.evidence_note);
 
-    // Insert into suggestion_logs with conflict protection (always persist)
-    const { data: inserted, error: insertError } = await supabaseAdmin
-      .from('suggestion_logs')
-      .upsert({
+    // Insert into suggestion_logs with conflict protection (DO NOTHING on conflict)
+    const insertValues = {
         user_id: userId,
         recovery_score: recoveryScore,
         wearable_data: hasWearable ? biometricData : null,
@@ -457,19 +455,21 @@ Return ONLY JSON, no prose.`;
         evidence_note: suggestion.evidence_note ?? null,
         kb_doc_ids: kbDocIds,
         suggestion_date: ymd,
-      }, { onConflict: 'user_id,suggestion_date' })
-      .select(
-        'id, created_at, suggestion, recovery_score, data_used, trend, focus_used, source, evidence_note, suggestion_date, kb_doc_ids'
-      )
-      .single();
+      };
+    const { data: inserted, error: insertError } = await supabaseAdmin
+      .from('suggestion_logs')
+      .insert(insertValues, { count: 'exact' })
+      .select('id, created_at, suggestion, recovery_score, data_used, trend, focus_used, source, evidence_note, suggestion_date, kb_doc_ids')
+      .maybeSingle();
 
     if (locked) await releaseUserDayLock(userId, ymd);
 
-    if (insertError) {
-      // Fallback: fetch today's row if conflict or other transient
+    // If insert returned no row (due to conflict DO NOTHING) or any error, fetch existing row
+    if (insertError || !inserted) {
       const existing = await getTodaysSuggestion(userId, ymd);
       if (existing) return existing;
-      throw insertError;
+      if (insertError) throw insertError;
+      throw new Error('Insert returned no row and existing not found');
     }
 
     return inserted as {
