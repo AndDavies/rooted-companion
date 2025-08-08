@@ -151,7 +151,7 @@ function synthesizeFromSpec(spec: SuggestionSpec, recoveryScore: number): Sugges
   let action = "Take 10 minutes for calm breathing";
   let rationale = "Gentle breath focus supports your nervous system and recovery.";
   let evidence_note = "Long exhale supports vagal tone";
-  let category: SuggestionPayload['category'] = theme;
+  const category: SuggestionPayload['category'] = theme;
 
   if (theme === 'breathwork') {
     action = `Spend ${minutes} minutes on extended-exhale breathing (inhale 4, exhale 6–8).`;
@@ -581,5 +581,16 @@ async function getTodaysSuggestion(userId: string, ymd: string) {
     .limit(1)
     .maybeSingle();
   if (error) return null;
-  return data as any;
+  return data as {
+    id: string;
+    created_at: string;
+    suggestion: { action: string; category: SuggestionPayload['category']; rationale: string };
+    recovery_score: number;
+    data_used: 'wearable' | 'onboarding' | 'both' | 'none';
+    trend: Trend;
+    focus_used: Focus | null;
+    source: 'auto' | 'manual' | 'api';
+    evidence_note: string | null;
+    suggestion_date: string;
+  } | null;
 }

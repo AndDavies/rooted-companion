@@ -105,14 +105,14 @@ export function DailyPulseWidget() {
       clearTimeout(timeout);
 
       if (result && result.success) {
-        setSuggestion(result.suggestion as any);
+        setSuggestion(result.suggestion as unknown as SuggestionData);
         setErrorState(null);
       } else if (result && !result.success && result.error) {
         if (result.error.code === 'DB_CONFLICT' && !conflictRetriedRef.current) {
           conflictRetriedRef.current = true;
-          const retry = await getDailySuggestion({ autoGenerate: true } as any);
+          const retry = await getDailySuggestion({ autoGenerate: true });
           if (retry && retry.success) {
-            setSuggestion(retry.suggestion as any);
+            setSuggestion(retry.suggestion as unknown as SuggestionData);
             setErrorState(null);
             return;
           }

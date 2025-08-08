@@ -195,8 +195,9 @@ export async function getTodaysPlanTaskSummary() {
       hasTask: true,
       task: { id: task.id, title: task.action, dueDate: task.date, status: task.completed ? 'completed' : 'pending' },
     };
-  } catch (e: any) {
-    return { success: false, error: { code: 'UNKNOWN', stage: 'plan_fetch', message: e?.message || 'Unknown error' } };
+  } catch (e: unknown) {
+    const err = e as { message?: string };
+    return { success: false, error: { code: 'UNKNOWN', stage: 'plan_fetch', message: err?.message || 'Unknown error' } };
   }
 }
 
