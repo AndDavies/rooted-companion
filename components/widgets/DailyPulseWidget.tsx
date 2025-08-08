@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, useOptimistic } from 'react';
+import { useState, useEffect, useOptimistic, useRef } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -9,8 +9,8 @@ import {
   getDailySuggestion, 
   markSuggestionComplete, 
   submitMoodReflection, 
-  generateNewSuggestion,
-  getMoodReflection 
+  getMoodReflection,
+  getTodaysPlanTaskSummary,
 } from '@/app/(dashboard)/dashboard/actions';
 
 type SuggestionData = {
@@ -58,9 +58,35 @@ export function DailyPulseWidget() {
   const [moodReflection, setMoodReflection] = useState<MoodReflection>(null);
   const [loading, setLoading] = useState(true);
   const [generating, setGenerating] = useState(false);
+  const [errorState, setErrorState] = useState<null | { code: string; stage: string; message: string }>(null);
+  const conflictRetriedRef = useRef(false);
+  const [retrying, setRetrying] = useState(false);
+
+  const messageForError = (code: string): string => {
+    switch (code) {
+      case 'OPENAI_TIMEOUT':
+        return 'We paused to reset. Try again when ready.';
+      case 'DB_ERROR':
+        return 'We had trouble fetching your data. Please retry.';
+      case 'OPENAI_TIMEOUT':
+      case 'OPENAI_RATE_LIMIT':
+        return 'We’re catching our breath. The service is busy—try again in a moment.';
+      case 'OPENAI_ERROR':
+      case 'PARSE_ERROR':
+        return 'That didn’t land. Let’s try a simpler step—tap retry.';
+      case 'DB_CONFLICT':
+        return '';
+      case 'DB_ERROR':
+      case 'UNKNOWN':
+      default:
+        return 'Something went sideways. Tap retry, or come back in a bit.';
+    }
+  };
   const [selectedMoodEmoji, setSelectedMoodEmoji] = useState('');
   const [moodText, setMoodText] = useState('');
   const [submittingMood, setSubmittingMood] = useState(false);
+  const [planTask, setPlanTask] = useState<{ title: string } | null>(null);
+  const [hidePlanBanner, setHidePlanBanner] = useState(false);
   
   // Optimistic state for completion
   const [optimisticCompleted, setOptimisticCompleted] = useOptimistic(
@@ -71,11 +97,35 @@ export function DailyPulseWidget() {
   const loadSuggestion = async () => {
     try {
       setLoading(true);
-      const data = await getDailySuggestion();
-      setSuggestion(data);
+      // 10s timeout wrapper
+      const timeout = setTimeout(() => {
+        setErrorState({ code: 'OPENAI_TIMEOUT', stage: 'suggestion_fetch', message: 'Timed out' });
+      }, 10000);
+      const result = await getDailySuggestion({ autoGenerate: true } as any);
+      clearTimeout(timeout);
+
+      if (result && result.success) {
+        setSuggestion(result.suggestion as any);
+        setErrorState(null);
+      } else if (result && !result.success && result.error) {
+        if (result.error.code === 'DB_CONFLICT' && !conflictRetriedRef.current) {
+          conflictRetriedRef.current = true;
+          const retry = await getDailySuggestion({ autoGenerate: true } as any);
+          if (retry && retry.success) {
+            setSuggestion(retry.suggestion as any);
+            setErrorState(null);
+            return;
+          }
+        }
+        setErrorState(result.error);
+        setSuggestion(null);
+      } else {
+        setErrorState({ code: 'UNKNOWN', stage: 'unknown', message: 'Unknown error' });
+        setSuggestion(null);
+      }
       
-      if (data?.id) {
-        const reflection = await getMoodReflection(data.id);
+      if ((result as any)?.success && (result as any).suggestion?.id) {
+        const reflection = await getMoodReflection((result as any).suggestion.id);
         setMoodReflection(reflection);
         if (reflection) {
           setSelectedMoodEmoji(reflection.mood_emoji || '');
@@ -84,36 +134,14 @@ export function DailyPulseWidget() {
       }
     } catch (error) {
       console.error('Error loading suggestion:', error);
+      setErrorState({ code: 'UNKNOWN', stage: 'unknown', message: 'Request failed' });
+      setSuggestion(null);
     } finally {
       setLoading(false);
     }
   };
 
-  const handleGenerateNew = async () => {
-    try {
-      setGenerating(true);
-      const result = await generateNewSuggestion();
-      if (result.success && result.suggestion) {
-        setSuggestion({
-          id: result.suggestion.id || crypto.randomUUID(),
-          action: result.suggestion.action,
-          category: result.suggestion.category,
-          rationale: result.suggestion.rationale,
-          recoveryScore: result.suggestion.recoveryScore,
-          completed: false,
-          wearableUsed: result.suggestion.wearableUsed,
-          createdAt: new Date().toISOString()
-        });
-        setMoodReflection(null);
-        setSelectedMoodEmoji('');
-        setMoodText('');
-      }
-    } catch (error) {
-      console.error('Error generating suggestion:', error);
-    } finally {
-      setGenerating(false);
-    }
-  };
+  // Phase 2: auto-generation occurs server-side; manual generate removed
 
   const handleToggleComplete = async () => {
     if (!suggestion?.id) return;
@@ -156,6 +184,28 @@ export function DailyPulseWidget() {
     loadSuggestion();
   }, []);
 
+  // Fetch plan banner (read-only, independent)
+  useEffect(() => {
+    let cancelled = false;
+    const key = 'hidePlanBannerUntilRefresh';
+    if (typeof window !== 'undefined') {
+      const hidden = window.sessionStorage.getItem(key);
+      if (hidden === 'true') {
+        setHidePlanBanner(true);
+        return () => { cancelled = true };
+      }
+    }
+    (async () => {
+      try {
+        const res = await getTodaysPlanTaskSummary();
+        if (!cancelled && res?.success && res.hasTask && res.task) {
+          setPlanTask({ title: res.task.title });
+        }
+      } catch {}
+    })();
+    return () => { cancelled = true };
+  }, []);
+
   if (loading) {
     return (
       <Card className="w-full">
@@ -170,6 +220,28 @@ export function DailyPulseWidget() {
   }
 
   if (!suggestion) {
+    if (errorState) {
+      return (
+        <Card className="w-full">
+          <CardContent className="p-8">
+            <div className="space-y-4 text-center">
+              <h3 className="text-lg font-medium text-neutral-900">Generation took a breather.</h3>
+              <p className="text-neutral-600">{messageForError(errorState.code)}</p>
+              <Button onClick={async () => { setRetrying(true); await loadSuggestion(); setRetrying(false); }} disabled={retrying} className="bg-blue-600 hover:bg-blue-700">
+                {retrying ? (
+                  <>
+                    <RefreshCw className="h-4 w-4 mr-2 animate-spin" />
+                    Retrying...
+                  </>
+                ) : (
+                  'Retry'
+                )}
+              </Button>
+            </div>
+          </CardContent>
+        </Card>
+      );
+    }
     return (
       <Card className="w-full border-dashed border-2 border-gray-200">
         <CardContent className="p-8 text-center">
@@ -180,25 +252,9 @@ export function DailyPulseWidget() {
                 Ready for today&apos;s wellness suggestion?
               </h3>
               <p className="text-gray-600 mb-4">
-                Let&apos;s create a personalized recommendation based on your recovery data.
+                We&apos;re preparing a personalized recommendation based on your data.
               </p>
-              <Button 
-                onClick={handleGenerateNew} 
-                disabled={generating}
-                className="bg-blue-600 hover:bg-blue-700"
-              >
-                {generating ? (
-                  <>
-                    <RefreshCw className="h-4 w-4 mr-2 animate-spin" />
-                    Generating...
-                  </>
-                ) : (
-                  <>
-                    <Lightbulb className="h-4 w-4 mr-2" />
-                    Get My Daily Suggestion
-                  </>
-                )}
-              </Button>
+              {/* Generate button removed in Phase 2; auto-generation occurs on load */}
             </div>
           </div>
         </CardContent>
@@ -230,6 +286,34 @@ export function DailyPulseWidget() {
       </CardHeader>
 
       <CardContent className="space-y-6 pb-6">
+        {/* Plan coexistence banner */}
+        {planTask && !hidePlanBanner && (
+          <div className="mb-2 rounded-lg border border-blue-100 bg-blue-50 p-3">
+            <div className="flex items-start justify-between gap-3">
+              <div className="text-sm">
+                <div className="font-medium text-blue-900">Today’s plan task</div>
+                <div className="text-blue-800/80">{planTask.title}</div>
+              </div>
+              <div className="flex items-center gap-2">
+                <a href="/dashboard" className="text-sm underline text-blue-800">Open plan</a>
+                <button
+                  className="text-xs opacity-70 hover:opacity-100 text-blue-900"
+                  onClick={() => {
+                    setHidePlanBanner(true);
+                    try {
+                      if (typeof window !== 'undefined') {
+                        window.sessionStorage.setItem('hidePlanBannerUntilRefresh', 'true');
+                      }
+                    } catch {}
+                  }}
+                  aria-label="Hide plan reminder"
+                >
+                  Hide
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
         {/* Suggestion Display */}
         <div className="space-y-4">
           <div className="flex items-start space-x-3">
@@ -250,6 +334,11 @@ export function DailyPulseWidget() {
               <span className="font-medium text-gray-700">Why this helps: </span>
               {suggestion.rationale}
             </div>
+            {('evidence_note' in (suggestion as any)) && (suggestion as any).evidence_note && (
+              <div className="text-xs text-gray-500 opacity-80">
+                Evidence note: {(suggestion as any).evidence_note}
+              </div>
+            )}
           </div>
 
           {/* Completion Toggle */}

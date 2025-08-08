@@ -1,12 +1,17 @@
 import { ChatOpenAI } from "@langchain/openai";
 import { HumanMessage, SystemMessage } from "@langchain/core/messages";
 import { supabaseAdmin } from "@/utils/supabase/admin";
+import { toUserLocalDate } from "@/lib/db/dates";
+import { tryAcquireUserDayLock, releaseUserDayLock } from "@/lib/db/locks";
+import { buildSpec, decideDataUsed, SuggestionSpec, Trend, Focus } from "@/lib/suggestions/spec";
+import { computeProgression, HistoryPoint, Progression } from "@/lib/suggestions/progression";
 
 // Types
 export type SuggestionPayload = {
   action: string;
-  category: 'movement' | 'breathwork' | 'mindset' | 'sleep' | 'nutrition';
+  category: 'movement' | 'breathwork' | 'mindset' | 'nutrition';
   rationale: string;
+  evidence_note?: string;
   recoveryScore: number;
   wearableUsed: boolean;
 };
@@ -137,14 +142,44 @@ async function loadRecentBiometricData(userId: string): Promise<BiometricData> {
   }
 }
 
-// Fallback suggestion when no biometric data is available
-function suggestBreathwork(): SuggestionPayload {
+// Spec-based fallback synthesis
+function synthesizeFromSpec(spec: SuggestionSpec, recoveryScore: number): SuggestionPayload {
+  const theme = spec.theme;
+  const minutes = spec.durationMin;
+  const intensity = spec.intensity;
+
+  let action = "Take 10 minutes for calm breathing";
+  let rationale = "Gentle breath focus supports your nervous system and recovery.";
+  let evidence_note = "Long exhale supports vagal tone";
+  let category: SuggestionPayload['category'] = theme;
+
+  if (theme === 'breathwork') {
+    action = `Spend ${minutes} minutes on extended-exhale breathing (inhale 4, exhale 6–8).`;
+    rationale = intensity === 'downregulate'
+      ? "Longer exhales bias the parasympathetic system to reduce arousal and help you settle."
+      : "Breath pacing steadies heart rate variability and supports recovery.";
+    evidence_note = "Long exhale supports vagal tone";
+  } else if (theme === 'movement') {
+    action = `Take a ${minutes}-minute easy walk at conversational pace.`;
+    rationale = "Light aerobic movement increases circulation without adding stress, aiding recovery.";
+    evidence_note = "Light aerobic work aids recovery";
+  } else if (theme === 'mindset') {
+    action = `Do a ${minutes}-minute guided body scan or soft-focus meditation.`;
+    rationale = "Brief attentional rest reduces cognitive load and stress reactivity.";
+    evidence_note = "Brief focus reduces cognitive load";
+  } else if (theme === 'nutrition') {
+    action = `Prepare a simple snack with protein and fiber (e.g., yogurt + berries) within ${minutes} minutes.`;
+    rationale = "Protein and fiber help stabilize energy and support recovery.";
+    evidence_note = "Protein+fiber stabilize energy";
+  }
+
   return {
-    action: "Take 5 minutes for 4-7-8 breathing: Inhale for 4 counts, hold for 7, exhale for 8. Repeat 4 cycles.",
-    category: "breathwork",
-    rationale: "Without biometric data to guide us today, let's focus on proven stress-reduction techniques. The 4-7-8 breathing pattern activates your parasympathetic nervous system, helping to naturally calm your mind and body.",
-    recoveryScore: 50,
-    wearableUsed: false
+    action,
+    category,
+    rationale,
+    evidence_note,
+    recoveryScore,
+    wearableUsed: false,
   };
 }
 
@@ -189,24 +224,97 @@ async function getHRVTrend(userId: string, days: number = 7): Promise<string> {
 }
 
 // Main function to generate daily suggestion
-export async function generateDailySuggestion(userId: string): Promise<SuggestionPayload> {
+export async function generateDailySuggestion(
+  userId: string,
+  meta?: { source?: 'auto' | 'manual' | 'api'; tz?: string }
+): Promise<{
+  id: string;
+  suggestion: { action: string; category: SuggestionPayload['category']; rationale: string };
+  recovery_score: number;
+  created_at: string;
+  data_used: 'wearable' | 'onboarding' | 'both' | 'none';
+  trend: Trend;
+  focus_used: Focus | null;
+  source: 'auto' | 'manual' | 'api';
+  evidence_note: string | null;
+  suggestion_date: string;
+}> {
   try {
-    // Step 1: Load recent biometric data
-    const biometricData = await loadRecentBiometricData(userId);
-    
-    // Step 2: If no biometric data, return fallback
-    if (biometricData.dataPoints === 0) {
-      console.log(`No biometric data found for user ${userId}, using fallback suggestion`);
-      return suggestBreathwork();
-    }
+    const source = meta?.source ?? 'manual';
+    const tz = meta?.tz ?? 'Europe/Lisbon';
 
-    // Step 3: Calculate recovery score
+    // Load onboarding (preferred_focus)
+    const preferred_focus = await loadPreferredFocus(userId);
+
+    // Load recent biometric data
+    const biometricData = await loadRecentBiometricData(userId);
+    const hasWearable = biometricData.dataPoints > 0;
+
+    // Calculate recovery score
     const recoveryScore = calculateRecoveryScore(biometricData);
 
-    // Step 4: Get HRV trend for additional context
-    const hrvTrend = await getHRVTrend(userId);
+    // Trend mapping
+    let trend: Trend = 'unknown';
+    if (hasWearable) {
+      const rawTrend = await getHRVTrend(userId);
+      trend = rawTrend === 'improving' ? 'up' : rawTrend === 'declining' ? 'down' : 'stable';
+    }
 
-    // Step 5: Set up LangChain with OpenAI
+    const history = await (async (): Promise<HistoryPoint[]> => {
+      const todayUtc = new Date().toISOString().slice(0, 10);
+      const { data, error } = await supabaseAdmin
+        .from('suggestion_logs')
+        .select('id, completed, created_at')
+        .eq('user_id', userId)
+        .neq('suggestion_date', todayUtc)
+        .order('created_at', { ascending: false })
+        .limit(10);
+
+      if (error || !data) return [];
+
+      const ids = data.map((r: any) => r.id);
+      if (ids.length === 0) return data.map((r: any) => ({ completed: Boolean(r.completed) }));
+
+      const { data: moods } = await supabaseAdmin
+        .from('mood_reflections')
+        .select('suggestion_id, mood_emoji')
+        .in('suggestion_id', ids);
+
+      const idToMood: Record<string, string | null> = {};
+      (moods || []).forEach((m: any) => {
+        idToMood[m.suggestion_id] = m.mood_emoji ?? null;
+      });
+
+      const mapEmoji = (emoji: string | null | undefined): HistoryPoint['mood'] => {
+        if (!emoji) return null;
+        if (emoji.includes('😔') || emoji.includes('😞')) return 'sad';
+        if (emoji.includes('😐')) return 'neutral';
+        if (emoji.includes('😊') || emoji.includes('🙂')) return 'smile';
+        if (emoji.includes('😄') || emoji.includes('😌')) return 'grin';
+        return null;
+      };
+
+      return data.map((r: any) => ({
+        completed: Boolean(r.completed),
+        mood: mapEmoji(idToMood[r.id]),
+      }));
+    })();
+    const { progression } = computeProgression(history);
+
+    // Data used
+    const hasOnboarding = Boolean(preferred_focus);
+    const data_used = decideDataUsed(hasWearable, hasOnboarding);
+
+    // Suggestion date (user-local)
+    const ymd = toUserLocalDate(new Date(), tz);
+
+    // Try to acquire per-user-day lock (best-effort)
+    const locked = await tryAcquireUserDayLock(userId, ymd);
+
+    // Build Spec
+    const spec = buildSpec(preferred_focus, trend, progression);
+
+    // LLM setup
     const model = new ChatOpenAI({
       modelName: "gpt-4.1-mini",
       temperature: 0.7,
@@ -214,30 +322,21 @@ export async function generateDailySuggestion(userId: string): Promise<Suggestio
       openAIApiKey: process.env.OPENAI_API_KEY,
     });
 
-    // Step 6: Construct system prompt
-    const systemPrompt = `You are ROOTED, a soft-spoken, evidence-based wellness coach. Your job is to give one helpful action per day to reduce stress, improve recovery, and promote emotional resilience. 
-
-Base your suggestions on biometric patterns and always be supportive, never overwhelming. Just one thing, clearly explained.
-
-Guidelines:
-- Keep suggestions simple and actionable (5-20 minutes)
-- Focus on evidence-based practices
-- Be encouraging and non-judgmental
-- Tailor advice to the person's current recovery state
-- Use warm, human language
-- Never suggest anything dangerous or medical
-
-You must respond with a valid JSON object with this exact structure:
-{
-  "action": "specific actionable suggestion",
-  "category": "movement|breathwork|mindset|sleep|nutrition",
-  "rationale": "explanation based on their data"
-}`;
+    // System prompt requiring strict JSON with evidence_note
+    const systemPrompt = `You are ROOTED, a soft-spoken, evidence-based wellness coach.
+Output STRICT JSON with keys: action, category, rationale, evidence_note.
+- evidence_note: ≤ 12 words, concise physiological or behavioral rationale fragment.
+- No URLs, no citations, no markdown—plain text only.
+- category must be one of: movement | breathwork | mindset | nutrition.
+Rules:
+- Adhere to the provided SPEC exactly.
+- If trend is "down": prefer downregulating actions and language.
+- Keep within 5–20 minutes; avoid equipment; no medical claims.`;
 
     // Step 7: Create user message with biometric context
-    const biometricSummary = [];
+    const biometricSummary = [] as string[];
     if (biometricData.hrv_rmssd !== undefined) {
-      biometricSummary.push(`HRV: ${biometricData.hrv_rmssd.toFixed(1)}ms (trend: ${hrvTrend})`);
+      biometricSummary.push(`HRV: ${biometricData.hrv_rmssd.toFixed(1)}ms (trend: ${trend})`);
     }
     if (biometricData.heart_rate_resting !== undefined) {
       biometricSummary.push(`Resting HR: ${biometricData.heart_rate_resting.toFixed(0)} bpm`);
@@ -250,12 +349,37 @@ You must respond with a valid JSON object with this exact structure:
       biometricSummary.push(`Stress level: ${biometricData.stress_avg.toFixed(0)}/100`);
     }
 
-    const userMessage = `Current recovery score: ${recoveryScore}/100
+    // Build retrieval query and attempt KB retrieval (graceful on failure)
+    const compactSummary = [
+      `trend: ${trend}`,
+      biometricData.sleep_total ? `sleep~${(biometricData.sleep_total/3600).toFixed(1)}h` : null,
+      biometricData.stress_avg ? `stress~${biometricData.stress_avg.toFixed(0)}/100` : null,
+    ].filter(Boolean).join('; ');
 
-Recent biometric data (${biometricData.timeRange}):
-${biometricSummary.join('\n')}
+    let snippetsBlock = '';
+    let kbDocIds: string[] = [];
+    try {
+      const { retrieveEvidenceSnippets } = await import('@/lib/kb/retriever');
+      const queryText = `theme:${spec.theme}; intensity:${spec.intensity}; minutes:${spec.durationMin}; focus:${preferred_focus ?? 'none'}; ${compactSummary}`;
+      const hits = await retrieveEvidenceSnippets(queryText, 2);
+      if (hits && hits.length > 0) {
+        const lines = hits.slice(0,2).map((h, idx) => {
+          const trimmed = (h.content || '').slice(0, 200).replace(/\s+/g, ' ').trim();
+          kbDocIds.push(`${h.doc_id}#${h.chunk_id}`);
+          return `${idx+1}) ${h.title ?? 'Evidence'}: "${trimmed}"`;
+        });
+        snippetsBlock = `\n\nEVIDENCE SNIPPETS (use to ground rationale & evidence_note):\n${lines.join('\n')}`;
+      }
+    } catch (e) {
+      // On any KB error, continue without snippets
+    }
 
-Please provide one personalized wellness suggestion for today. Focus on what would be most beneficial given these metrics.`;
+    const userMessage = `SPEC: ${JSON.stringify(spec)}
+Recovery score: ${recoveryScore}/100
+Biometric window: ${biometricData.timeRange} ${hasWearable ? '(present)' : '(none)'}
+Preferred focus: ${preferred_focus ?? 'none'}
+Recent biometrics:\n${biometricSummary.join('\n')}${snippetsBlock}
+Return ONLY JSON, no prose.`;
 
     // Step 8: Generate suggestion using LangChain
     const messages = [
@@ -264,88 +388,97 @@ Please provide one personalized wellness suggestion for today. Focus on what wou
     ];
 
     const response = await model.invoke(messages);
-    const responseText = response.content as string;
+    const responseText = String(response.content ?? '');
 
-    // Step 9: Parse JSON response
-    let suggestionData;
+    let suggestionData: any | null = null;
     try {
-      // Try to extract JSON from the response
       const jsonMatch = responseText.match(/\{[\s\S]*\}/);
-      if (jsonMatch) {
-        suggestionData = JSON.parse(jsonMatch[0]);
-      } else {
-        throw new Error('No JSON found in response');
-      }
-    } catch (parseError) {
-      console.error('Error parsing LLM response:', parseError);
-      console.error('Raw response:', responseText);
-      
-      // Fallback suggestion if parsing fails
-      return {
-        action: "Take a 10-minute mindful walk outdoors, focusing on your breath and surroundings",
-        category: "movement",
-        rationale: `Your recovery score is ${recoveryScore}/100. Gentle movement and fresh air can help reset your nervous system.`,
-        recoveryScore,
-        wearableUsed: true
-      };
+      suggestionData = jsonMatch ? JSON.parse(jsonMatch[0]) : null;
+    } catch {
+      suggestionData = null;
     }
 
-    // Step 10: Validate and construct final payload
-    const suggestion: SuggestionPayload = {
-      action: suggestionData.action || "Take 5 deep breaths and stretch gently",
-      category: suggestionData.category || "breathwork",
-      rationale: suggestionData.rationale || `Based on your recovery score of ${recoveryScore}/100, this will help support your wellness today.`,
-      recoveryScore,
-      wearableUsed: true
-    };
+    let suggestion: SuggestionPayload;
+    if (suggestionData && typeof suggestionData === 'object') {
+      const rawCategory = String(suggestionData.category ?? '').toLowerCase();
+      const category: SuggestionPayload['category'] =
+        ['movement', 'breathwork', 'mindset', 'nutrition'].includes(rawCategory)
+          ? (rawCategory as any)
+          : spec.theme;
+      suggestion = {
+        action: String(suggestionData.action ?? '').trim() || 'Take 5 deep breaths and stretch gently',
+        category,
+        rationale:
+          String(suggestionData.rationale ?? '').trim() ||
+          `Based on your recovery score of ${recoveryScore}/100, this will help support your wellness today.`,
+        evidence_note: suggestionData.evidence_note ? String(suggestionData.evidence_note) : undefined,
+        recoveryScore,
+        wearableUsed: hasWearable,
+      };
+    } else {
+      suggestion = synthesizeFromSpec(spec, recoveryScore);
+      suggestion.wearableUsed = hasWearable;
+    }
 
-    // Step 11: Insert into suggestion_logs table
-    const { error: insertError } = await supabaseAdmin
+    // Evidence note normalization (≤12 words, no URLs/markdown)
+    const sanitizeEvidence = (note: string | undefined | null): string => {
+      const trimmed = (note || '').trim();
+      if (!trimmed) return defaultEvidenceNoteFor(spec);
+      if (/https?:\/\//i.test(trimmed) || /www\./i.test(trimmed) || /\[|\]|\*/.test(trimmed)) {
+        return defaultEvidenceNoteFor(spec);
+      }
+      const words = trimmed.split(/\s+/).filter(Boolean);
+      if (words.length > 12) return defaultEvidenceNoteFor(spec);
+      return trimmed;
+    };
+    suggestion.evidence_note = sanitizeEvidence(suggestion.evidence_note);
+
+    // Insert into suggestion_logs with conflict protection (always persist)
+    const { data: inserted, error: insertError } = await supabaseAdmin
       .from('suggestion_logs')
-      .insert({
+      .upsert({
         user_id: userId,
         recovery_score: recoveryScore,
-        wearable_data: biometricData,
+        wearable_data: hasWearable ? biometricData : null,
         suggestion: {
           action: suggestion.action,
           category: suggestion.category,
-          rationale: suggestion.rationale
+          rationale: suggestion.rationale,
         },
-        completed: false
-      });
+        completed: false,
+        source,
+        data_used,
+        trend,
+        focus_used: preferred_focus ?? null,
+        evidence_note: suggestion.evidence_note ?? null,
+        kb_doc_ids: kbDocIds,
+        suggestion_date: ymd,
+      }, { onConflict: 'user_id,suggestion_date' })
+      .select(
+        'id, created_at, suggestion, recovery_score, data_used, trend, focus_used, source, evidence_note, suggestion_date, kb_doc_ids'
+      )
+      .single();
+
+    if (locked) await releaseUserDayLock(userId, ymd);
 
     if (insertError) {
-      console.error('Error inserting suggestion log:', insertError);
-      // Continue anyway - don't fail the whole function for logging issues
+      // Fallback: fetch today's row if conflict or other transient
+      const existing = await getTodaysSuggestion(userId, ymd);
+      if (existing) return existing;
+      throw insertError;
     }
 
-    return suggestion;
+    return inserted as any;
 
   } catch (error) {
     console.error('Error in generateDailySuggestion:', error);
-    
-    // Return fallback suggestion on any error
-    const fallback = suggestBreathwork();
-    
-    // Try to log the fallback suggestion
+    // Last-resort: try to fetch today if unique constraint hit elsewhere
     try {
-      await supabaseAdmin
-        .from('suggestion_logs')
-        .insert({
-          user_id: userId,
-          recovery_score: fallback.recoveryScore,
-          suggestion: {
-            action: fallback.action,
-            category: fallback.category,
-            rationale: fallback.rationale
-          },
-          completed: false
-        });
-    } catch (logError) {
-      console.error('Error logging fallback suggestion:', logError);
-    }
-    
-    return fallback;
+      const ymd = toUserLocalDate(new Date());
+      const row = await getTodaysSuggestion(userId, ymd);
+      if (row) return row;
+    } catch {}
+    throw error;
   }
 }
 
@@ -386,4 +519,51 @@ export async function markSuggestionCompleted(suggestionId: string): Promise<voi
   } catch (error) {
     console.error('Error in markSuggestionCompleted:', error);
   }
+}
+
+// Load preferred_focus from onboarding
+async function loadPreferredFocus(userId: string): Promise<Focus | null> {
+  try {
+    const { data } = await supabaseAdmin
+      .from('user_onboarding')
+      .select('preferred_focus')
+      .eq('user_id', userId)
+      .order('created_at', { ascending: false })
+      .limit(1)
+      .maybeSingle();
+    const v = (data?.preferred_focus as string | null) ?? null;
+    return normalizeFocus(v);
+  } catch {
+    return null;
+  }
+}
+
+function normalizeFocus(v?: string | null): Focus | null {
+  if (!v) return null;
+  const m = v.toLowerCase();
+  if (['move', 'movement', 'training', 'exercise'].includes(m)) return 'movement';
+  if (['breath', 'breathwork', 'breathing'].includes(m)) return 'breathwork';
+  if (['mind', 'mindset', 'meditation'].includes(m)) return 'mindset';
+  if (['food', 'nutrition', 'diet'].includes(m)) return 'nutrition';
+  return null;
+}
+
+function defaultEvidenceNoteFor(spec: SuggestionSpec): string {
+  if (spec.intensity === 'downregulate') return 'Long exhale supports vagal tone';
+  if (spec.theme === 'movement') return 'Light aerobic work aids recovery';
+  if (spec.theme === 'mindset') return 'Brief focus reduces cognitive load';
+  if (spec.theme === 'nutrition') return 'Protein+fiber stabilize energy';
+  return 'Gentle practice supports recovery';
+}
+
+async function getTodaysSuggestion(userId: string, ymd: string) {
+  const { data, error } = await supabaseAdmin
+    .from('suggestion_logs')
+    .select('id, created_at, suggestion, recovery_score, data_used, trend, focus_used, source, evidence_note, suggestion_date')
+    .eq('user_id', userId)
+    .eq('suggestion_date', ymd)
+    .limit(1)
+    .maybeSingle();
+  if (error) return null;
+  return data as any;
 }

@@ -377,30 +377,51 @@ export type Database = {
         Row: {
           completed: boolean | null
           created_at: string | null
+          data_used: string | null
+          evidence_note: string | null
+          focus_used: string | null
           id: string
+          kb_doc_ids: Json | null
           recovery_score: number | null
+          source: string | null
           subjective_input: Json | null
           suggestion: Json | null
+          suggestion_date: string | null
+          trend: string | null
           user_id: string | null
           wearable_data: Json | null
         }
         Insert: {
           completed?: boolean | null
           created_at?: string | null
+          data_used?: string | null
+          evidence_note?: string | null
+          focus_used?: string | null
           id?: string
+          kb_doc_ids?: Json | null
           recovery_score?: number | null
+          source?: string | null
           subjective_input?: Json | null
           suggestion?: Json | null
+          suggestion_date?: string | null
+          trend?: string | null
           user_id?: string | null
           wearable_data?: Json | null
         }
         Update: {
           completed?: boolean | null
           created_at?: string | null
+          data_used?: string | null
+          evidence_note?: string | null
+          focus_used?: string | null
           id?: string
+          kb_doc_ids?: Json | null
           recovery_score?: number | null
+          source?: string | null
           subjective_input?: Json | null
           suggestion?: Json | null
+          suggestion_date?: string | null
+          trend?: string | null
           user_id?: string | null
           wearable_data?: Json | null
         }

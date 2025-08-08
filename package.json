@@ -6,7 +6,15 @@
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
-    "lint": "next lint"
+    "lint": "next lint",
+    "graph:deps:dot": "depcruise --config .dependency-cruiser.js --output-type dot app lib components utils > docs/architecture/graphs/deps-graph.dot",
+    "graph:deps:svg": "echo 'SVG rendering skipped (no Graphviz). Use deps-graph.dot instead.'",
+    "graph:deps:json": "depcruise --config .dependency-cruiser.js --output-type json app lib components utils > docs/architecture/graphs/deps-graph.json",
+    "graph:deps": "npm run graph:deps:dot && npm run graph:deps:svg",
+    "graph:madge": "madge --ts-config tsconfig.json --json app lib components utils > docs/architecture/graphs/madge.json",
+    "graph:calls": "tsx scripts/build-callgraphs.ts",
+    "graph:routes": "tsx scripts/scan-routes.ts",
+    "graph:all": "npm run graph:deps && npm run graph:deps:json && npm run graph:madge && npm run graph:calls && npm run graph:routes"
   },
   "dependencies": {
     "@langchain/core": "^0.3.66",
@@ -32,10 +40,15 @@
     "@types/node": "^20",
     "@types/react": "^18",
     "@types/react-dom": "^18",
+    "dependency-cruiser": "^16.10.4",
     "eslint": "^8",
     "eslint-config-next": "14.2.31",
+    "globby": "^14.1.0",
+    "madge": "^8.0.0",
     "postcss": "^8",
     "tailwindcss": "^3.4.1",
+    "ts-morph": "^24.0.0",
+    "tsx": "^4.20.3",
     "typescript": "^5"
   }
 }

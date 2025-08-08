@@ -4,62 +4,14 @@ import { createClientForActions } from '@/utils/supabase/server';
 import { redirect } from 'next/navigation';
 import { revalidatePath } from 'next/cache';
 import { supabaseAdmin } from '@/utils/supabase/admin';
+import { toUserLocalDate } from '@/lib/db/dates';
+import { getOrCreateTodaysSuggestion } from '@/lib/suggestions/service';
 
-export async function getDailySuggestion() {
-  try {
-    const supabase = await createClientForActions();
-    const { data: { user }, error } = await supabase.auth.getUser();
-    
-    if (error || !user) {
-      redirect('/login');
-    }
+type ServerError = { code: 'OPENAI_TIMEOUT'|'OPENAI_ERROR'|'DB_ERROR'|'PARSE_ERROR'|'UNKNOWN'|'UNAUTH'|'NO_PLAN_TASK'|'DB_CONFLICT'|'OPENAI_RATE_LIMIT', stage: 'biometrics'|'prompt'|'openai'|'parse'|'db'|'unknown'|'suggestion_fetch'|'plan_fetch', message: string }
 
-    // Query directly from server (better than API call from server action)
-    const { data: recentSuggestion, error: fetchError } = await supabaseAdmin
-      .from('suggestion_logs')
-      .select('*')
-      .eq('user_id', user.id)
-      .order('created_at', { ascending: false })
-      .limit(1)
-      .maybeSingle();
-
-    if (fetchError) {
-      console.error('Error fetching suggestion:', fetchError);
-      return null;
-    }
-
-    // Check if suggestion is from today
-    if (recentSuggestion && recentSuggestion.created_at) {
-      const suggestionDate = new Date(recentSuggestion.created_at);
-      const today = new Date();
-      const isToday = suggestionDate.toDateString() === today.toDateString();
-
-      if (isToday && recentSuggestion.suggestion) {
-        const suggestion = recentSuggestion.suggestion as {
-          action: string;
-          category: string;
-          rationale: string;
-        };
-        return {
-          id: recentSuggestion.id,
-          action: suggestion.action,
-          category: suggestion.category,
-          rationale: suggestion.rationale,
-          recoveryScore: recentSuggestion.recovery_score,
-          completed: recentSuggestion.completed,
-          wearableUsed: recentSuggestion.wearable_data !== null,
-          createdAt: recentSuggestion.created_at
-        };
-      }
-    }
-
-    // If no suggestion for today, we'll need to generate one
-    // For now, return null and the component will handle generating one
-    return null;
-  } catch (error) {
-    console.error('Error getting daily suggestion:', error);
-    return null;
-  }
+export async function getDailySuggestion({ autoGenerate = true }: { autoGenerate?: boolean } = {}) {
+  const res = await getOrCreateTodaysSuggestion({ forceCreate: autoGenerate, source: 'auto' });
+  return res;
 }
 
 export async function markSuggestionComplete(suggestionId: string) {
@@ -178,40 +130,9 @@ export async function submitMoodReflection(suggestionId: string, moodEmoji: stri
 }
 
 export async function generateNewSuggestion() {
-  try {
-    const supabase = await createClientForActions();
-    const { data: { user }, error } = await supabase.auth.getUser();
-    
-    if (error || !user) {
-      redirect('/login');
-    }
-
-    // Import and call the suggestion agent
-    const { generateDailySuggestion } = await import('@/lib/llm/suggestionAgent');
-    const suggestion = await generateDailySuggestion(user.id);
-
-    // Get the suggestion ID from the database (it should have been inserted by the agent)
-    const { data: newSuggestion } = await supabaseAdmin
-      .from('suggestion_logs')
-      .select('id')
-      .eq('user_id', user.id)
-      .order('created_at', { ascending: false })
-      .limit(1)
-      .single();
-
-    revalidatePath('/dashboard');
-    
-    return {
-      success: true,
-      suggestion: {
-        id: newSuggestion?.id || null,
-        ...suggestion
-      }
-    };
-  } catch (error) {
-    console.error('Error generating new suggestion:', error);
-    return { success: false, message: 'Failed to generate new suggestion' };
-  }
+  const res = await getOrCreateTodaysSuggestion({ forceCreate: true, source: 'manual' });
+  revalidatePath('/dashboard');
+  return res;
 }
 
 export async function getMoodReflection(suggestionId: string) {
@@ -240,4 +161,70 @@ export async function getMoodReflection(suggestionId: string) {
     console.error('Error getting mood reflection:', error);
     return null;
   }
+}
+
+// Read-only plan task summary (UTC today)
+export async function getTodaysPlanTaskSummary() {
+  try {
+    const supabase = await createClientForActions();
+    const { data: { user }, error: authErr } = await supabase.auth.getUser();
+    if (authErr || !user) {
+      return { success: false, error: { code: 'UNAUTH', stage: 'plan_fetch', message: 'Not signed in' } };
+    }
+
+    const todayUtc = new Date().toISOString().slice(0, 10);
+
+    // Align with our existing plan API shapes; fall back to simple fields
+    const { data, error } = await supabase
+      .from('recovery_plan_tasks')
+      .select('id, action, date, completed, user_id')
+      .eq('user_id', user.id)
+      .eq('date', todayUtc)
+      .eq('completed', false)
+      .order('date', { ascending: true })
+      .limit(1);
+
+    if (error) {
+      return { success: false, error: { code: 'DB_ERROR', stage: 'plan_fetch', message: error.message } };
+    }
+
+    if (!data || data.length === 0) {
+      return { success: true, hasTask: false, code: 'NO_PLAN_TASK' } as const;
+    }
+
+    const task = data[0] as { id: string; action: string; date: string; completed: boolean };
+    return {
+      success: true,
+      hasTask: true,
+      task: { id: task.id, title: task.action, dueDate: task.date, status: task.completed ? 'completed' : 'pending' },
+    };
+  } catch (e: any) {
+    return { success: false, error: { code: 'UNKNOWN', stage: 'plan_fetch', message: e?.message || 'Unknown error' } };
+  }
+}
+
+// KB health check (lightweight)
+export async function getKbHealth() {
+  const supabase = await createClientForActions();
+  const { error: err1 } = await supabase
+    .from('wellness_kb_docs')
+    .select('id', { count: 'exact', head: true });
+
+  let rpcOk = true;
+  try {
+    await supabase.rpc('kb_match_documents', {
+      query_embedding: Array(1536).fill(0),
+      match_count: 1,
+      min_score: 0.99,
+    });
+  } catch {
+    rpcOk = false;
+  }
+
+  return {
+    success: !err1 && rpcOk,
+    docsCountKnown: null,
+    rpcOk,
+    error: err1 ? { code: 'KB_HEALTH_DB', message: err1.message } : rpcOk ? null : { code: 'KB_HEALTH_RPC', message: 'RPC call failed' },
+  } as const;
 }

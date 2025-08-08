@@ -3,6 +3,7 @@ import { Input } from '@/components/ui/input'
 import { login } from './actions'
 import { ShieldCheck } from 'lucide-react'
 import Link from 'next/link'
+import Image from 'next/image'
 
 export default function LoginPage({
   searchParams,
@@ -11,16 +12,46 @@ export default function LoginPage({
 }) {
   return (
     <div className="min-h-screen grid grid-cols-1 md:grid-cols-2">
-      {/* Left Panel - Dark Background */}
-      <div className="bg-neutral-950 text-white flex items-center justify-center p-8">
-        <div className="text-center">
-          <div className="inline-flex items-center justify-center w-20 h-20 rounded-full bg-neutral-800 mb-6">
-            <ShieldCheck className="w-10 h-10 text-neutral-300" />
+      {/* Left Panel - Branded Background */}
+      <div
+        className="relative p-8 text-neutral-900"
+        style={{
+          backgroundImage: "url('/images/login_left_image_rooted.png')",
+          backgroundSize: 'cover',
+          backgroundPosition: 'center',
+        }}
+      >
+        {/* Light overlay for legibility without heavy darkening */}
+        <div className="absolute inset-0 bg-white/20" />
+
+        {/* Brand - top-left */}
+        <div className="absolute z-20 top-6 left-6">
+          <div className="text-neutral-900/90 bg-white/40 backdrop-blur-[1px] px-3 py-1.5 rounded-md inline-block">
+            <span className="text-base sm:text-lg font-logo font-semibold">The ROOTED Companion</span>
           </div>
-                      <h2 className="text-xl font-logo text-neutral-200 mb-2">ROOTED Way</h2>
-          <p className="text-neutral-400 text-sm max-w-sm">
-            Secure access to your recovery companion
-          </p>
+        </div>
+
+        {/* Centered content (middle of panel) */}
+        <div className="absolute inset-0 z-10 flex items-center justify-center">
+          <div className="max-w-md mx-auto text-center px-6 sm:px-0">
+            <p className="text-sm sm:text-base text-neutral-900/90 leading-relaxed">
+              Welcome to your calm, supportive space for better recovery and resilience. Build
+              sustainable, stress‑reducing habits with gentle coaching guidance. One clear step each
+              day, so you can feel more balanced—one day at a time.
+            </p>
+
+            {/* Supporting Graphic below copy */}
+            <div className="mt-6 flex justify-center">
+              <Image
+                src="/images/login_screen_graphic_rooted.png"
+                alt="ROOTED login illustration"
+                width={640}
+                height={360}
+                className="w-full max-w-sm drop-shadow-sm"
+                priority={false}
+              />
+            </div>
+          </div>
         </div>
       </div>
 
@@ -121,3 +152,4 @@ export default function LoginPage({
     </div>
   )
 }
+
