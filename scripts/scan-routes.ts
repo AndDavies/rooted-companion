@@ -90,7 +90,7 @@ async function scan() {
     if (!grouped.has(k)) grouped.set(k, []);
     grouped.get(k)!.push(e);
   }
-  for (const [k, arr] of grouped) {
+  grouped.forEach((arr, k) => {
     const cluster = k.replace(/[^A-Za-z0-9_]/g, '_') || 'root';
     mmd.push(`  subgraph "${k || '/'}"`);
     for (const e of arr) {
@@ -98,7 +98,7 @@ async function scan() {
       mmd.push(`    ${id}["${e.path} (${e.kind}${e.methods ? ':' + e.methods.join(',') : ''})\n${e.file}"]`);
     }
     mmd.push('  end');
-  }
+  });
   writeFileSync(resolve(OUT_DIR, 'routes.mmd'), mmd.join('\n'));
 
   console.log('Route map written to docs/architecture/graphs/routes.md and routes.mmd');

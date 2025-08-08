@@ -61,7 +61,7 @@ export async function getOrCreateTodaysSuggestion(opts?: { forceCreate?: boolean
 
 function mapRow(r: {
   id: string;
-  suggestion: { action?: string; category?: SuggestionDTO['category']; rationale?: string } | null;
+  suggestion: { action?: string; category?: SuggestionDTO['category']; rationale?: string; evidence_note?: string | null } | null;
   recovery_score?: number;
   wearable_data?: unknown;
   completed?: boolean;

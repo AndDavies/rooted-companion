@@ -22,6 +22,7 @@ type SuggestionData = {
   completed: boolean | null;
   wearableUsed: boolean;
   createdAt: string;
+  evidence_note?: string | null;
 } | null;
 
 type MoodReflection = {
@@ -334,9 +335,9 @@ export function DailyPulseWidget() {
               <span className="font-medium text-gray-700">Why this helps: </span>
               {suggestion.rationale}
             </div>
-            {('evidence_note' in (suggestion as unknown as { evidence_note?: string | null })) && (suggestion as any).evidence_note && (
+            {suggestion.evidence_note && (
               <div className="text-xs text-gray-500 opacity-80">
-                Evidence note: {(suggestion as unknown as { evidence_note?: string | null }).evidence_note}
+                Evidence note: {suggestion.evidence_note}
               </div>
             )}
           </div>

@@ -10,17 +10,17 @@ import { generateDailySuggestion, getLatestBiometrics, markSuggestionCompleted }
 export async function exampleGenerateSuggestion(userId: string) {
   try {
     console.log(`Generating daily suggestion for user: ${userId}`);
-    
-    const suggestion = await generateDailySuggestion(userId);
-    
+
+    const row = await generateDailySuggestion(userId);
+
     console.log('Generated suggestion:', {
-      action: suggestion.action,
-      category: suggestion.category,
-      recoveryScore: suggestion.recoveryScore,
-      wearableUsed: suggestion.wearableUsed
+      action: row.suggestion.action,
+      category: row.suggestion.category,
+      recoveryScore: row.recovery_score,
+      // wearableUsed is inferred from presence of wearable_data; not selected here
     });
-    
-    return suggestion;
+
+    return row;
   } catch (error) {
     console.error('Error generating suggestion:', error);
     throw error;
@@ -68,15 +68,14 @@ export async function exampleDailyWorkflow(userId: string) {
   try {
     // 1. Generate the daily suggestion
     console.log('=== ROOTED Daily Suggestion Workflow ===');
-    const suggestion = await generateDailySuggestion(userId);
+    const row = await generateDailySuggestion(userId);
     
     // 2. Display the suggestion (in a real app, this would be shown in the UI)
     console.log('\n📋 Today\'s Suggestion:');
-    console.log(`Action: ${suggestion.action}`);
-    console.log(`Category: ${suggestion.category}`);
-    console.log(`Rationale: ${suggestion.rationale}`);
-    console.log(`Recovery Score: ${suggestion.recoveryScore}/100`);
-    console.log(`Used Wearable Data: ${suggestion.wearableUsed ? 'Yes' : 'No'}`);
+    console.log(`Action: ${row.suggestion.action}`);
+    console.log(`Category: ${row.suggestion.category}`);
+    console.log(`Rationale: ${row.suggestion.rationale}`);
+    console.log(`Recovery Score: ${row.recovery_score}/100`);
     
     // 3. Simulate user completing the action (after some time)
     // In a real app, this would happen when the user taps "Mark as Done"
@@ -85,7 +84,7 @@ export async function exampleDailyWorkflow(userId: string) {
     // Note: In real usage, you'd get the suggestion ID from the database
     // For this example, we'd need to query the most recent suggestion
     
-    return suggestion;
+    return row;
   } catch (error) {
     console.error('Error in daily workflow:', error);
     throw error;
