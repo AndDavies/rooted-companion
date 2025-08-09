@@ -16,9 +16,8 @@ export async function login(formData: FormData) {
 
   if (error) {
     console.error('Login error:', error.message)
-    // Common auth errors: invalid_credentials, email_not_confirmed, etc.
-    const code = (error as any)?.code || 'auth_error'
-    if (code === 'email_not_confirmed') {
+    // Handle unverified email with a message-based check (no 'any' casts)
+    if (/email/i.test(error.message) && /confirm/i.test(error.message)) {
       redirect('/login?error=Please verify your email before logging in.')
     }
     redirect('/login?error=Invalid credentials')
@@ -47,9 +46,8 @@ export async function signup(formData: FormData) {
 
   if (error) {
     console.error('Signup error:', error.message)
-    const code = (error as any)?.code || 'signup_failed'
-    // Handle duplicate email gracefully
-    if (code === 'user_already_exists' || /already/i.test(error.message)) {
+    // Handle duplicate email gracefully without 'any'
+    if (/already/i.test(error.message)) {
       redirect(`/login?error=${encodeURIComponent('An account with that email already exists. Please sign in.')}`)
     }
     redirect(`/signup?error=${encodeURIComponent('Failed to create account')}`)

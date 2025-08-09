@@ -1,9 +1,8 @@
-import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { signup } from '../login/actions'
-import PendingButton from '@/components/ui/PendingButton'
 import Link from 'next/link'
 import Image from 'next/image'
+import PendingButton from '@/components/ui/PendingButton'
 
 export default function SignupPage({
   searchParams,
