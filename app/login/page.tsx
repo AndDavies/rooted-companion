@@ -3,11 +3,12 @@ import { Input } from '@/components/ui/input'
 import { login } from './actions'
 import Link from 'next/link'
 import Image from 'next/image'
+import PendingButton from '@/components/ui/PendingButton'
 
 export default function LoginPage({
   searchParams,
 }: {
-  searchParams: { error?: string }
+  searchParams: { error?: string; notice?: string }
 }) {
   return (
     <div className="min-h-screen grid grid-cols-1 md:grid-cols-2">
@@ -66,7 +67,12 @@ export default function LoginPage({
               </p>
             </div>
 
-            {/* Error Message */}
+            {/* Notices / Errors */}
+            {searchParams.notice && (
+              <div className="mb-4 p-3 text-sm text-green-700 bg-green-50 border border-green-200 rounded-md">
+                {searchParams.notice}
+              </div>
+            )}
             {searchParams.error && (
               <div className="mb-4 p-3 text-sm text-red-600 bg-red-50 border border-red-200 rounded-md">
                 {searchParams.error}
@@ -114,13 +120,13 @@ export default function LoginPage({
               </div>
 
               {/* Submit Button */}
-              <Button 
+              <PendingButton 
                 formAction={login} 
                 className="w-full bg-neutral-900 hover:bg-neutral-800 text-white rounded-full transition-all duration-200"
                 size="lg"
               >
                 Log in
-              </Button>
+              </PendingButton>
             </form>
 
             {/* Sign Up Link */}

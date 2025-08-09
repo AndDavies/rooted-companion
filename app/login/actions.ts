@@ -15,8 +15,12 @@ export async function login(formData: FormData) {
   })
 
   if (error) {
-    // In a real app, you'd handle this more gracefully
     console.error('Login error:', error.message)
+    // Common auth errors: invalid_credentials, email_not_confirmed, etc.
+    const code = (error as any)?.code || 'auth_error'
+    if (code === 'email_not_confirmed') {
+      redirect('/login?error=Please verify your email before logging in.')
+    }
     redirect('/login?error=Invalid credentials')
   }
 
@@ -28,16 +32,29 @@ export async function signup(formData: FormData) {
   
   const email = formData.get('email') as string
   const password = formData.get('password') as string
+  const full_name = (formData.get('name') as string) || null
+
+  const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || process.env.NEXT_PUBLIC_SUPABASE_URL || ''
 
   const { error } = await supabase.auth.signUp({ 
     email, 
-    password 
+    password,
+    options: { 
+      data: { full_name },
+      emailRedirectTo: siteUrl ? `${siteUrl}/login?notice=${encodeURIComponent('Email verified. Please sign in.')}` : undefined
+    }
   })
 
   if (error) {
     console.error('Signup error:', error.message)
-    redirect('/login?error=Failed to create account')
+    const code = (error as any)?.code || 'signup_failed'
+    // Handle duplicate email gracefully
+    if (code === 'user_already_exists' || /already/i.test(error.message)) {
+      redirect(`/login?error=${encodeURIComponent('An account with that email already exists. Please sign in.')}`)
+    }
+    redirect(`/signup?error=${encodeURIComponent('Failed to create account')}`)
   }
 
-  redirect('/dashboard')
+  // Email confirmation is required; inform user to check email
+  redirect(`/login?notice=${encodeURIComponent('Check your email to verify your account.')}`)
 }

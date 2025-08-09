@@ -504,6 +504,8 @@ export type Database = {
           health_profile: Json | null
           id: string
           location: string | null
+          receive_daily_email: boolean | null
+          receive_weekly_email: boolean | null
           recovery_goals: Json | null
           role: string
           timezone: string | null
@@ -520,6 +522,8 @@ export type Database = {
           health_profile?: Json | null
           id: string
           location?: string | null
+          receive_daily_email?: boolean | null
+          receive_weekly_email?: boolean | null
           recovery_goals?: Json | null
           role?: string
           timezone?: string | null
@@ -536,29 +540,13 @@ export type Database = {
           health_profile?: Json | null
           id?: string
           location?: string | null
+          receive_daily_email?: boolean | null
+          receive_weekly_email?: boolean | null
           recovery_goals?: Json | null
           role?: string
           timezone?: string | null
           updated_at?: string
           website?: string | null
-        }
-        Relationships: []
-      }
-      users_public: {
-        Row: {
-          joined_at: string | null
-          user_id: string
-          username: string
-        }
-        Insert: {
-          joined_at?: string | null
-          user_id: string
-          username: string
-        }
-        Update: {
-          joined_at?: string | null
-          user_id?: string
-          username?: string
         }
         Relationships: []
       }

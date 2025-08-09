@@ -329,13 +329,14 @@ export async function generateDailySuggestion(
     // System prompt requiring strict JSON with evidence_note
     const systemPrompt = `You are ROOTED, a soft-spoken, evidence-based wellness coach.
 Output STRICT JSON with keys: action, category, rationale, evidence_note.
-- evidence_note: ≤ 12 words, concise physiological or behavioral rationale fragment.
+- evidence_note: ≤ 12 words, concise physiological or behavioral mechanism.
 - No URLs, no citations, no markdown—plain text only.
 - category must be one of: movement | breathwork | mindset | nutrition.
 Rules:
 - Adhere to the provided SPEC exactly.
 - If trend is "down": prefer downregulating actions and language.
-- Keep within 5–20 minutes; avoid equipment; no medical claims.`;
+- Keep within 5–20 minutes; avoid equipment; no medical claims.
+- When user has a stated preferred focus (from onboarding), the category MUST match that focus. Use wearable data to tailor duration, intensity, and rationale, but do not change category.`;
 
     // Step 7: Create user message with biometric context
     const biometricSummary = [] as string[];
@@ -378,11 +379,17 @@ Rules:
       // On any KB error, continue without snippets
     }
 
+    // Additional guidance when preferred focus exists
+    const guidanceBlock = (preferred_focus)
+      ? `\n\nONBOARDING PRIORITY:\n- Category MUST equal user's preferred focus: ${preferred_focus}.\n- Propose associative, aligned practices (science-backed and/or appropriate contemplative).\n- Use wearable data (if present) to adjust intensity/duration/rationale—not category.\n- Keep approachable, clear, kind; ensure it advances the preferred focus today.`
+      : '';
+
     const userMessage = `SPEC: ${JSON.stringify(spec)}
 Recovery score: ${recoveryScore}/100
 Biometric window: ${biometricData.timeRange} ${hasWearable ? '(present)' : '(none)'}
 Preferred focus: ${preferred_focus ?? 'none'}
 Recent biometrics:\n${biometricSummary.join('\n')}${snippetsBlock}
+${guidanceBlock}
 Return ONLY JSON, no prose.`;
 
     // Step 8: Generate suggestion using LangChain
@@ -408,7 +415,10 @@ Return ONLY JSON, no prose.`;
       const allowed = ['movement', 'breathwork', 'mindset', 'nutrition'] as const;
       const isAllowed = (val: string): val is SuggestionPayload['category'] =>
         (allowed as readonly string[]).includes(val);
-      const category: SuggestionPayload['category'] = isAllowed(rawCategory) ? rawCategory : spec.theme;
+      // Enforce preferred focus category when present
+      const category: SuggestionPayload['category'] = preferred_focus
+        ? preferred_focus
+        : (isAllowed(rawCategory) ? rawCategory : spec.theme);
       suggestion = {
         action: String(suggestionData.action ?? '').trim() || 'Take 5 deep breaths and stretch gently',
         category,
