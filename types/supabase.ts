@@ -14,6 +14,42 @@ export type Database = {
   }
   public: {
     Tables: {
+      audit_log: {
+        Row: {
+          action: string
+          actor_user_id: string | null
+          created_at: string | null
+          id: string
+          new_data: Json | null
+          old_data: Json | null
+          row_id: string | null
+          source: string | null
+          table_name: string
+        }
+        Insert: {
+          action: string
+          actor_user_id?: string | null
+          created_at?: string | null
+          id?: string
+          new_data?: Json | null
+          old_data?: Json | null
+          row_id?: string | null
+          source?: string | null
+          table_name: string
+        }
+        Update: {
+          action?: string
+          actor_user_id?: string | null
+          created_at?: string | null
+          id?: string
+          new_data?: Json | null
+          old_data?: Json | null
+          row_id?: string | null
+          source?: string | null
+          table_name?: string
+        }
+        Relationships: []
+      }
       biometrics: {
         Row: {
           created_at: string | null
@@ -145,6 +181,45 @@ export type Database = {
         }
         Relationships: []
       }
+      email_resources: {
+        Row: {
+          created_at: string | null
+          date: string | null
+          id: string
+          image_url: string | null
+          link: string
+          published_at: string | null
+          summary: string | null
+          title: string
+          topic_tags: string[] | null
+          type: string
+        }
+        Insert: {
+          created_at?: string | null
+          date?: string | null
+          id?: string
+          image_url?: string | null
+          link: string
+          published_at?: string | null
+          summary?: string | null
+          title: string
+          topic_tags?: string[] | null
+          type: string
+        }
+        Update: {
+          created_at?: string | null
+          date?: string | null
+          id?: string
+          image_url?: string | null
+          link?: string
+          published_at?: string | null
+          summary?: string | null
+          title?: string
+          topic_tags?: string[] | null
+          type?: string
+        }
+        Relationships: []
+      }
       mood_reflections: {
         Row: {
           created_at: string | null
@@ -207,55 +282,193 @@ export type Database = {
         }
         Relationships: []
       }
-      recovery_plan_tasks: {
+      plan_items: {
         Row: {
-          action: string
-          category: string | null
-          completed: boolean | null
           created_at: string | null
           date: string
+          duration_min: number | null
+          evidence_snippets: Json | null
           id: string
-          plan_id: string | null
+          intensity: string | null
+          pillar: Database["public"]["Enums"]["pillar"]
+          plan_id: string
           rationale: string | null
-          time_suggestion: string | null
-          recipe_id: string | null
-          user_id: string | null
+          scheduled_time: string | null
+          status: Database["public"]["Enums"]["plan_item_status"]
+          suggested_slot: string | null
+          task_payload: Json
+          task_title: string
+          updated_at: string | null
+          user_id: string
         }
         Insert: {
-          action: string
-          category?: string | null
-          completed?: boolean | null
           created_at?: string | null
           date: string
+          duration_min?: number | null
+          evidence_snippets?: Json | null
           id?: string
-          plan_id?: string | null
+          intensity?: string | null
+          pillar: Database["public"]["Enums"]["pillar"]
+          plan_id: string
           rationale?: string | null
-          time_suggestion?: string | null
-          recipe_id?: string | null
-          user_id?: string | null
+          scheduled_time?: string | null
+          status?: Database["public"]["Enums"]["plan_item_status"]
+          suggested_slot?: string | null
+          task_payload: Json
+          task_title: string
+          updated_at?: string | null
+          user_id: string
         }
         Update: {
-          action?: string
-          category?: string | null
-          completed?: boolean | null
           created_at?: string | null
           date?: string
+          duration_min?: number | null
+          evidence_snippets?: Json | null
           id?: string
-          plan_id?: string | null
+          intensity?: string | null
+          pillar?: Database["public"]["Enums"]["pillar"]
+          plan_id?: string
           rationale?: string | null
-          time_suggestion?: string | null
-          recipe_id?: string | null
-          user_id?: string | null
+          scheduled_time?: string | null
+          status?: Database["public"]["Enums"]["plan_item_status"]
+          suggested_slot?: string | null
+          task_payload?: Json
+          task_title?: string
+          updated_at?: string | null
+          user_id?: string
         }
         Relationships: [
           {
-            foreignKeyName: "recovery_plan_tasks_plan_id_fkey"
+            foreignKeyName: "fk_plan_items_plan"
             columns: ["plan_id"]
             isOneToOne: false
-            referencedRelation: "recovery_plans"
+            referencedRelation: "mv_plan_metrics_rollups"
+            referencedColumns: ["plan_id"]
+          },
+          {
+            foreignKeyName: "fk_plan_items_plan"
+            columns: ["plan_id"]
+            isOneToOne: false
+            referencedRelation: "plans"
             referencedColumns: ["id"]
           },
         ]
+      }
+      plan_progress_events: {
+        Row: {
+          event_type: Database["public"]["Enums"]["progress_event_type"]
+          id: string
+          mood_after: number | null
+          mood_before: number | null
+          notes: string | null
+          plan_item_id: string
+          timestamp: string
+          user_id: string
+        }
+        Insert: {
+          event_type: Database["public"]["Enums"]["progress_event_type"]
+          id?: string
+          mood_after?: number | null
+          mood_before?: number | null
+          notes?: string | null
+          plan_item_id: string
+          timestamp?: string
+          user_id: string
+        }
+        Update: {
+          event_type?: Database["public"]["Enums"]["progress_event_type"]
+          id?: string
+          mood_after?: number | null
+          mood_before?: number | null
+          notes?: string | null
+          plan_item_id?: string
+          timestamp?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "fk_events_item"
+            columns: ["plan_item_id"]
+            isOneToOne: false
+            referencedRelation: "plan_items"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      plans: {
+        Row: {
+          created_at: string | null
+          end_date: string
+          id: string
+          metadata: Json | null
+          source: Database["public"]["Enums"]["plan_source"]
+          source_ref: string | null
+          start_date: string
+          status: Database["public"]["Enums"]["plan_status"]
+          updated_at: string | null
+          user_id: string
+          version: number
+        }
+        Insert: {
+          created_at?: string | null
+          end_date: string
+          id?: string
+          metadata?: Json | null
+          source: Database["public"]["Enums"]["plan_source"]
+          source_ref?: string | null
+          start_date: string
+          status?: Database["public"]["Enums"]["plan_status"]
+          updated_at?: string | null
+          user_id: string
+          version?: number
+        }
+        Update: {
+          created_at?: string | null
+          end_date?: string
+          id?: string
+          metadata?: Json | null
+          source?: Database["public"]["Enums"]["plan_source"]
+          source_ref?: string | null
+          start_date?: string
+          status?: Database["public"]["Enums"]["plan_status"]
+          updated_at?: string | null
+          user_id?: string
+          version?: number
+        }
+        Relationships: []
+      }
+      program_templates: {
+        Row: {
+          audience_tags: string[] | null
+          created_at: string | null
+          days: Json
+          description: string | null
+          id: string
+          name: string
+          updated_at: string | null
+          version: number
+        }
+        Insert: {
+          audience_tags?: string[] | null
+          created_at?: string | null
+          days: Json
+          description?: string | null
+          id?: string
+          name: string
+          updated_at?: string | null
+          version?: number
+        }
+        Update: {
+          audience_tags?: string[] | null
+          created_at?: string | null
+          days?: Json
+          description?: string | null
+          id?: string
+          name?: string
+          updated_at?: string | null
+          version?: number
+        }
+        Relationships: []
       }
       recovery_plan_reflections: {
         Row: {
@@ -287,11 +500,64 @@ export type Database = {
         }
         Relationships: [
           {
-            foreignKeyName: "recovery_plan_reflections_plan_id_fkey"
-            columns: ["plan_id"]
-            isOneToOne: false
-            referencedRelation: "recovery_plans"
-            referencedColumns: ["id"]
+            foreignKeyName: "recovery_plan_reflections_plan_id_fkey",
+            columns: ["plan_id"],
+            isOneToOne: false,
+            referencedRelation: "recovery_plans",
+            referencedColumns: ["id"],
+          },
+        ]
+      }
+      recovery_plan_tasks: {
+        Row: {
+          action: string
+          category: string | null
+          completed: boolean | null
+          created_at: string | null
+          date: string
+          id: string
+          plan_id: string | null
+          rationale: string | null
+          scheduled_at: string | null
+          recipe_id: string | null
+          time_suggestion: string | null
+          user_id: string | null
+        }
+        Insert: {
+          action: string
+          category?: string | null
+          completed?: boolean | null
+          created_at?: string | null
+          date: string
+          id?: string
+          plan_id?: string | null
+          rationale?: string | null
+          scheduled_at?: string | null
+          recipe_id?: string | null
+          time_suggestion?: string | null
+          user_id?: string | null
+        }
+        Update: {
+          action?: string
+          category?: string | null
+          completed?: boolean | null
+          created_at?: string | null
+          date?: string
+          id?: string
+          plan_id?: string | null
+          rationale?: string | null
+          scheduled_at?: string | null
+          recipe_id?: string | null
+          time_suggestion?: string | null
+          user_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "recovery_plan_tasks_plan_id_fkey",
+            columns: ["plan_id"],
+            isOneToOne: false,
+            referencedRelation: "recovery_plans",
+            referencedColumns: ["id"],
           },
         ]
       }
@@ -427,6 +693,96 @@ export type Database = {
         }
         Relationships: []
       }
+      task_library: {
+        Row: {
+          contraindications: string[] | null
+          created_at: string | null
+          default_circadian_slots: string[] | null
+          description: string | null
+          duration_max: number | null
+          duration_min: number | null
+          evidence_refs: string[] | null
+          id: string
+          intensity_tags: string[] | null
+          pillar: Database["public"]["Enums"]["pillar"]
+          slug: string
+          title: string
+          updated_at: string | null
+          version: number
+          zeitgeber_tags: string[] | null
+        }
+        Insert: {
+          contraindications?: string[] | null
+          created_at?: string | null
+          default_circadian_slots?: string[] | null
+          description?: string | null
+          duration_max?: number | null
+          duration_min?: number | null
+          evidence_refs?: string[] | null
+          id?: string
+          intensity_tags?: string[] | null
+          pillar: Database["public"]["Enums"]["pillar"]
+          slug: string
+          title: string
+          updated_at?: string | null
+          version?: number
+          zeitgeber_tags?: string[] | null
+        }
+        Update: {
+          contraindications?: string[] | null
+          created_at?: string | null
+          default_circadian_slots?: string[] | null
+          description?: string | null
+          duration_max?: number | null
+          duration_min?: number | null
+          evidence_refs?: string[] | null
+          id?: string
+          intensity_tags?: string[] | null
+          pillar?: Database["public"]["Enums"]["pillar"]
+          slug?: string
+          title?: string
+          updated_at?: string | null
+          version?: number
+          zeitgeber_tags?: string[] | null
+        }
+        Relationships: []
+      }
+      user_circadian_profiles: {
+        Row: {
+          bedtime: string
+          caffeine_cutoff: string | null
+          chronotype: Database["public"]["Enums"]["chronotype"]
+          created_at: string | null
+          light_exposure_prefs: string | null
+          shift_work_flag: boolean | null
+          updated_at: string | null
+          user_id: string
+          wake_time: string
+        }
+        Insert: {
+          bedtime: string
+          caffeine_cutoff?: string | null
+          chronotype?: Database["public"]["Enums"]["chronotype"]
+          created_at?: string | null
+          light_exposure_prefs?: string | null
+          shift_work_flag?: boolean | null
+          updated_at?: string | null
+          user_id: string
+          wake_time: string
+        }
+        Update: {
+          bedtime?: string
+          caffeine_cutoff?: string | null
+          chronotype?: Database["public"]["Enums"]["chronotype"]
+          created_at?: string | null
+          light_exposure_prefs?: string | null
+          shift_work_flag?: boolean | null
+          updated_at?: string | null
+          user_id?: string
+          wake_time?: string
+        }
+        Relationships: []
+      }
       user_onboarding: {
         Row: {
           availability: string | null
@@ -436,6 +792,7 @@ export type Database = {
           preferred_focus: string | null
           sleep_quality: string | null
           stress_level: string | null
+          updated_at: string | null
           user_id: string | null
         }
         Insert: {
@@ -446,6 +803,7 @@ export type Database = {
           preferred_focus?: string | null
           sleep_quality?: string | null
           stress_level?: string | null
+          updated_at?: string | null
           user_id?: string | null
         }
         Update: {
@@ -456,6 +814,7 @@ export type Database = {
           preferred_focus?: string | null
           sleep_quality?: string | null
           stress_level?: string | null
+          updated_at?: string | null
           user_id?: string | null
         }
         Relationships: []
@@ -686,9 +1045,130 @@ export type Database = {
           },
         ]
       }
+      wellness_kb_docs: {
+        Row: {
+          created_at: string
+          id: string
+          source_url: string | null
+          tags: string[] | null
+          title: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          source_url?: string | null
+          tags?: string[] | null
+          title: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          source_url?: string | null
+          tags?: string[] | null
+          title?: string
+        }
+        Relationships: []
+      }
+      wellness_kb_embeddings: {
+        Row: {
+          chunk_id: string
+          content: string
+          created_at: string
+          doc_id: string
+          embedding: string
+          id: string
+        }
+        Insert: {
+          chunk_id: string
+          content: string
+          created_at?: string
+          doc_id: string
+          embedding: string
+          id?: string
+        }
+        Update: {
+          chunk_id?: string
+          content?: string
+          created_at?: string
+          doc_id?: string
+          embedding?: string
+          id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "wellness_kb_embeddings_doc_id_fkey"
+            columns: ["doc_id"]
+            isOneToOne: false
+            referencedRelation: "wellness_kb_docs"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
     }
     Views: {
-      [_ in never]: never
+      mv_plan_metrics_rollups: {
+        Row: {
+          adherence_rate_pct: number | null
+          items_done: number | null
+          median_time_to_complete_min: number | null
+          plan_id: string | null
+          total_items: number | null
+          user_id: string | null
+        }
+        Relationships: []
+      }
+      v_program_templates_days: {
+        Row: {
+          day_number: string | null
+          items: Json | null
+          name: string | null
+          template_id: string | null
+          version: number | null
+        }
+        Relationships: []
+      }
+      v_task_library_min: {
+        Row: {
+          default_circadian_slots: string[] | null
+          duration_max: number | null
+          duration_min: number | null
+          id: string | null
+          intensity_tags: string[] | null
+          pillar: Database["public"]["Enums"]["pillar"] | null
+          slug: string | null
+          title: string | null
+          updated_at: string | null
+          version: number | null
+          zeitgeber_tags: string[] | null
+        }
+        Insert: {
+          default_circadian_slots?: string[] | null
+          duration_max?: number | null
+          duration_min?: number | null
+          id?: string | null
+          intensity_tags?: string[] | null
+          pillar?: Database["public"]["Enums"]["pillar"] | null
+          slug?: string | null
+          title?: string | null
+          updated_at?: string | null
+          version?: number | null
+          zeitgeber_tags?: string[] | null
+        }
+        Update: {
+          default_circadian_slots?: string[] | null
+          duration_max?: number | null
+          duration_min?: number | null
+          id?: string | null
+          intensity_tags?: string[] | null
+          pillar?: Database["public"]["Enums"]["pillar"] | null
+          slug?: string | null
+          title?: string | null
+          updated_at?: string | null
+          version?: number | null
+          zeitgeber_tags?: string[] | null
+        }
+        Relationships: []
+      }
     }
     Functions: {
       get_latest_metrics: {
@@ -700,9 +1180,39 @@ export type Database = {
           ts: string
         }[]
       }
+      import_program_templates: {
+        Args: { tpls: Json }
+        Returns: {
+          id: string
+          name: string
+          version: number
+        }[]
+      }
+      import_task_library: {
+        Args: { tasks: Json }
+        Returns: {
+          id: string
+          slug: string
+        }[]
+      }
       is_admin: {
-        Args: { p_uid: string }
+        Args: Record<PropertyKey, never> | { p_uid: string }
         Returns: boolean
+      }
+      kb_match_documents: {
+        Args: {
+          query_embedding: string
+          match_count?: number
+          min_score?: number
+        }
+        Returns: {
+          doc_id: string
+          chunk_id: string
+          title: string
+          source_url: string
+          content: string
+          score: number
+        }[]
       }
       match_documents: {
         Args: { query_embedding: string; match_count?: number; filter?: Json }
@@ -724,12 +1234,34 @@ export type Database = {
           distance: number
         }[]
       }
+      pg_advisory_unlock_bigint: {
+        Args: { key: string }
+        Returns: boolean
+      }
+      pg_try_advisory_lock_bigint: {
+        Args: { key: string }
+        Returns: boolean
+      }
+      upsert_program_template: {
+        Args: { tpl: Json }
+        Returns: string
+      }
+      upsert_task_library: {
+        Args: { task: Json }
+        Returns: string
+      }
     }
     Enums: {
+      chronotype: "lark" | "neutral" | "owl"
       event_access: "public" | "private" | "premium"
       event_registration_status: "confirmed" | "waitlisted" | "canceled"
       event_status: "draft" | "published" | "ongoing" | "completed" | "canceled"
       event_type: "virtual" | "in_person" | "hybrid" | "retreat"
+      pillar: "breath" | "sleep" | "food" | "movement" | "focus" | "joy"
+      plan_item_status: "pending" | "done" | "skipped" | "migrated"
+      plan_source: "template" | "agent" | "hybrid"
+      plan_status: "draft" | "active" | "completed" | "expired" | "abandoned"
+      progress_event_type: "complete" | "skip" | "reschedule"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -857,10 +1389,17 @@ export type CompositeTypes<
 export const Constants = {
   public: {
     Enums: {
+      chronotype: ["lark", "neutral", "owl"],
       event_access: ["public", "private", "premium"],
       event_registration_status: ["confirmed", "waitlisted", "canceled"],
       event_status: ["draft", "published", "ongoing", "completed", "canceled"],
       event_type: ["virtual", "in_person", "hybrid", "retreat"],
+      pillar: ["breath", "sleep", "food", "movement", "focus", "joy"],
+      plan_item_status: ["pending", "done", "skipped", "migrated"],
+      plan_source: ["template", "agent", "hybrid"],
+      plan_status: ["draft", "active", "completed", "expired", "abandoned"],
+      progress_event_type: ["complete", "skip", "reschedule"],
     },
   },
 } as const
+

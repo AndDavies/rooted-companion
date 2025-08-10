@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server'
 import type { NextRequest } from 'next/server'
 import { createClient } from '@/utils/supabase/server'
+import { isUserAdmin } from '@/lib/auth/admin'
 
 export async function middleware(request: NextRequest) {
   try {
@@ -14,6 +15,7 @@ export async function middleware(request: NextRequest) {
     
     // Define protected routes
     const protectedRoutes = ['/dashboard']
+    const adminRoutes = ['/admin']
     const authRoutes = ['/login', '/signup']
     
     const isProtectedRoute = protectedRoutes.some(route =>
@@ -21,6 +23,9 @@ export async function middleware(request: NextRequest) {
     )
     
     const isAuthRoute = authRoutes.some(route =>
+      request.nextUrl.pathname.startsWith(route)
+    )
+    const isAdminRoute = adminRoutes.some(route =>
       request.nextUrl.pathname.startsWith(route)
     )
     
@@ -32,6 +37,16 @@ export async function middleware(request: NextRequest) {
     // If accessing auth routes while authenticated, redirect to dashboard
     if (isAuthRoute && user && !error) {
       return NextResponse.redirect(new URL('/dashboard', request.url))
+    }
+
+    // Admin route guard: require auth and admin
+    if (isAdminRoute) {
+      if (!user || error) {
+        return NextResponse.redirect(new URL('/login', request.url))
+      }
+      if (!isUserAdmin(user)) {
+        return NextResponse.redirect(new URL('/', request.url))
+      }
     }
     
     return response

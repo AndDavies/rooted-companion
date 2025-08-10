@@ -1,6 +1,7 @@
 import { ChatOpenAI } from "@langchain/openai";
 import { HumanMessage, SystemMessage } from "@langchain/core/messages";
 import { supabaseAdmin } from "@/utils/supabase/admin";
+import { mapTasksToTimes } from '@/lib/circadian/scheduler'
 
 // Types
 export type PlanPayload = {
@@ -239,7 +240,7 @@ async function generatePlanWithLLM(
 ): Promise<PlanPayload> {
   // Set up LangChain with OpenAI
   const model = new ChatOpenAI({
-    modelName: "gpt-4o-mini",
+    modelName: "gpt-4.1-mini",
     temperature: 0.7,
     maxTokens: 1200,
     openAIApiKey: process.env.OPENAI_API_KEY,
@@ -536,7 +537,8 @@ async function savePlanToDatabase(userId: string, planData: PlanPayload): Promis
         rationale: task.rationale,
         category: task.type,
         time_suggestion: task.time_suggestion || null,
-        recipe_id: task.recipe_id || null
+        recipe_id: task.recipe_id || null,
+        scheduled_at: (task as unknown as { scheduled_at?: string }).scheduled_at || null,
       }))
     );
 
@@ -590,7 +592,34 @@ export async function generateRecoveryPlan(userId: string): Promise<PlanPayload>
     const onboardingData = await loadOnboardingData(userId);
     
     // Step 3: Generate plan with LLM
-    const planData = await generatePlanWithLLM(biometricData, onboardingData);
+    let planData = await generatePlanWithLLM(biometricData, onboardingData);
+
+    // Step 3.1: Deterministic scheduling using circadian + availability + tz
+    // Load circadian profile
+    const { data: circ } = await supabaseAdmin
+      .from('user_circadian_profiles')
+      .select('chronotype, wake_time, bedtime')
+      .eq('user_id', userId)
+      .maybeSingle()
+    const { data: userRow } = await supabaseAdmin
+      .from('users')
+      .select('timezone')
+      .eq('id', userId)
+      .maybeSingle()
+    const tz = userRow?.timezone || 'UTC'
+    if (circ?.chronotype && circ?.wake_time && circ?.bedtime) {
+      try {
+        planData = mapTasksToTimes(planData, {
+          chronotype: circ.chronotype as 'lark'|'neutral'|'owl',
+          wakeTime: String(circ.wake_time),
+          bedtime: String(circ.bedtime),
+          tz,
+          availability: (onboardingData?.availability as 'morning'|'midday'|'afternoon'|'evening'|'flexible' | undefined) || 'flexible',
+        })
+      } catch (e) {
+        console.warn('Scheduling failed; proceeding without scheduled_at:', e)
+      }
+    }
     
     // Step 4: Save to database
     await savePlanToDatabase(userId, planData);
@@ -621,6 +650,7 @@ export async function getCurrentPlan(userId: string) {
           rationale,
           category,
           time_suggestion,
+          scheduled_at,
           recipe_id,
           completed
         )

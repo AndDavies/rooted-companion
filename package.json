@@ -17,6 +17,7 @@
     "graph:all": "npm run graph:deps && npm run graph:deps:json && npm run graph:madge && npm run graph:calls && npm run graph:routes"
   },
   "dependencies": {
+    "@hookform/resolvers": "^5.2.1",
     "@langchain/core": "^0.3.66",
     "@langchain/openai": "^0.6.3",
     "@radix-ui/react-slot": "^1.2.3",
@@ -32,9 +33,11 @@
     "next": "14.2.31",
     "react": "^18",
     "react-dom": "^18",
+    "react-hook-form": "^7.62.0",
     "recharts": "^3.1.1",
     "tailwind-merge": "^3.3.1",
-    "tailwindcss-animate": "^1.0.7"
+    "tailwindcss-animate": "^1.0.7",
+    "zod": "^3.23.8"
   },
   "devDependencies": {
     "@types/node": "^20",

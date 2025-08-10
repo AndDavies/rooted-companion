@@ -27,8 +27,9 @@ const cinzel = localFont({
 });
 
 export const metadata: Metadata = {
-  title: "ROOTED Way Companion",
-  description: "A digital recovery companion blending wearable insights, breathwork, and personalized coaching.",
+  title: "ROOTED Companion",
+  description:
+    "A body-first companion that blends wearable insights, the Six Pillars, and AI coaching to build alignment and balance.",
 };
 
 export default function RootLayout({

@@ -27,6 +27,7 @@ export interface OnboardingData {
 interface OnboardingStepperProps {
   onComplete: (data: OnboardingData) => void
   isSubmitting?: boolean
+  renderExtraInStep?: (ctx: { currentStep: number; totalSteps: number; isLastStep: boolean }) => React.ReactNode
 }
 
 const onboardingSteps: OnboardingStep[] = [
@@ -87,7 +88,7 @@ const onboardingSteps: OnboardingStep[] = [
   }
 ]
 
-export default function OnboardingStepper({ onComplete, isSubmitting = false }: OnboardingStepperProps) {
+export default function OnboardingStepper({ onComplete, isSubmitting = false, renderExtraInStep }: OnboardingStepperProps) {
   const [currentStep, setCurrentStep] = useState(0)
   const [answers, setAnswers] = useState<Partial<OnboardingData>>({})
   const [direction, setDirection] = useState<'forward' | 'backward'>('forward')
@@ -231,6 +232,13 @@ export default function OnboardingStepper({ onComplete, isSubmitting = false }: 
                   </motion.button>
                 ))}
               </div>
+
+              {/* Extra injected content (e.g., circadian screener) */}
+              {renderExtraInStep && (
+                <div className="mb-6">
+                  {renderExtraInStep({ currentStep, totalSteps, isLastStep })}
+                </div>
+              )}
 
               {/* Navigation */}
               <div className="flex justify-between items-center">

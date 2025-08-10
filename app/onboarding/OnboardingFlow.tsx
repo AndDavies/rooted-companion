@@ -3,6 +3,8 @@
 import { useState, useEffect } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
 import OnboardingStepper, { OnboardingData } from '@/components/onboarding/OnboardingStepper'
+import { useToast } from '@/components/ui/useToast'
+import CircadianInline from './CircadianInline'
 import { motion } from 'framer-motion'
 import { saveOnboardingData } from './actions'
 
@@ -22,6 +24,8 @@ export default function OnboardingFlow({ existingData }: OnboardingFlowProps) {
   const router = useRouter()
   const searchParams = useSearchParams()
   const isUpdate = searchParams.get('update') === 'true'
+  const { toast } = useToast()
+  const [circadian, setCircadian] = useState<{ selfId: 'morning'|'neither'|'evening'; wakeTime?: string; bedtime?: string } | null>(null)
   
   // If user has completed onboarding and this isn't an update, redirect to dashboard
   useEffect(() => {
@@ -40,6 +44,23 @@ export default function OnboardingFlow({ existingData }: OnboardingFlowProps) {
       
       if (!result.success) {
         throw new Error(result.error || 'Failed to save onboarding data')
+      }
+
+      // Fire-and-forget circadian upsert (non-blocking)
+      if (circadian && circadian.selfId) {
+        const body: Record<string, string> = { selfId: circadian.selfId }
+        if (circadian.wakeTime) body.wakeTime = circadian.wakeTime
+        if (circadian.bedtime) body.bedtime = circadian.bedtime
+        fetch('/api/circadian/profile', {
+          method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body)
+        }).then(async (r) => {
+          if (!r.ok) {
+            const j = await r.json().catch(() => ({}))
+            toast({ title: 'Circadian save failed', description: String(j?.error ?? 'Error'), variant: 'destructive' })
+          }
+        }).catch(() => {
+          toast({ title: 'Circadian save failed', description: 'Network error', variant: 'destructive' })
+        })
       }
 
       // Success! Redirect to dashboard
@@ -75,6 +96,11 @@ export default function OnboardingFlow({ existingData }: OnboardingFlowProps) {
       <OnboardingStepper 
         onComplete={handleOnboardingComplete}
         isSubmitting={isSubmitting}
+        renderExtraInStep={({ currentStep, totalSteps }) => (
+          currentStep === totalSteps - 2 ? (
+            <CircadianInline onChange={setCircadian} />
+          ) : null
+        )}
       />
 
       {/* Additional context for updates */}

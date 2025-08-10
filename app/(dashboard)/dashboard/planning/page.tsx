@@ -22,6 +22,7 @@ type RecoveryPlanTask = {
   rationale: string | null;
   category: string | null;
   time_suggestion: string | null;
+  scheduled_at?: string | null;
   recipe_id: string | null;
   completed: boolean | null;
 };
@@ -113,7 +114,12 @@ export default async function PlanningPage() {
       .sort(([a], [b]) => a.localeCompare(b))
       .map(([date, tasks]) => ({
         date,
-        tasks: tasks.sort((a, b) => (a.time_suggestion || 'flexible').localeCompare(b.time_suggestion || 'flexible'))
+        tasks: tasks.sort((a, b) => {
+          const at = a.scheduled_at ? new Date(a.scheduled_at).getTime() : Number.MAX_SAFE_INTEGER
+          const bt = b.scheduled_at ? new Date(b.scheduled_at).getTime() : Number.MAX_SAFE_INTEGER
+          if (at !== bt) return at - bt
+          return (a.time_suggestion || 'flexible').localeCompare(b.time_suggestion || 'flexible')
+        })
       }));
   };
 
@@ -268,7 +274,9 @@ export default async function PlanningPage() {
                                     </span>
                                     {task.time_suggestion && (
                                       <span className="px-2 py-1 bg-neutral-100 text-neutral-600 text-xs rounded-lg">
-                                        {getTimeIcon(task.time_suggestion)} {task.time_suggestion}
+                                        {task.scheduled_at
+                                          ? new Date(task.scheduled_at).toLocaleTimeString(undefined, { hour: '2-digit', minute: '2-digit' })
+                                          : `${getTimeIcon(task.time_suggestion)} ${task.time_suggestion || 'any'}`}
                                       </span>
                                     )}
                                   </div>

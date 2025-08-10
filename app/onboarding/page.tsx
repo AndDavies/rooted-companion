@@ -1,6 +1,7 @@
 import { redirect } from 'next/navigation'
 import { createClient } from '@/utils/supabase/server'
 import OnboardingFlow from './OnboardingFlow'
+import { ToastProvider } from '@/components/ui/useToast'
 
 export default async function OnboardingPage() {
   const supabase = await createClient()
@@ -38,9 +39,11 @@ export default async function OnboardingPage() {
         </div>
 
         {/* Onboarding Form */}
-        <OnboardingFlow 
-          existingData={existingOnboarding} 
-        />
+        <ToastProvider>
+          <OnboardingFlow 
+            existingData={existingOnboarding} 
+          />
+        </ToastProvider>
       </div>
     </div>
   )
