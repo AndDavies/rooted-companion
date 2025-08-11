@@ -134,6 +134,23 @@ export default async function PlanningPage() {
           <p className="text-neutral-600">Your personalized path to wellness and recovery</p>
         </div>
 
+        {/* Planning Toolbar */}
+        <Card className="border-0 shadow-lg">
+          <CardHeader className="pb-3">
+            <CardTitle className="text-lg text-neutral-900">Plan generation</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="flex items-center justify-between gap-3 flex-col sm:flex-row">
+              <div className="text-sm text-neutral-600">
+                Times are personalized to your wake/bed window and timezone.
+              </div>
+              <div className="flex items-center gap-3">
+                <PlanningActions isGenerateButton={true} isRegenerateButton={!!currentPlan} />
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+
         {currentPlan ? (
           <>
             {/* Plan Overview */}
@@ -323,7 +340,7 @@ export default async function PlanningPage() {
               </div>
             </div>
 
-            {/* Plan Actions */}
+            {/* Plan Actions (secondary) */}
             <Card className="border-0 shadow-lg">
               <CardContent className="pt-6">
                 <div className="flex items-center justify-between">

@@ -43,7 +43,7 @@ export async function GET() {
 }
 
 // POST: triggers the generateRecoveryPlan() function
-export async function POST() {
+export async function POST(request: Request) {
   try {
     // Get the current user from Supabase auth
     const supabase = await createClientForActions();
@@ -53,8 +53,11 @@ export async function POST() {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
     
+    // Parse body for plan parameters
+    const body = await request.json().catch(() => ({}));
+    const planLength = ([3,5,7] as const).includes(body?.planLength) ? body.planLength as 3|5|7 : 3;
     // Generate the recovery plan
-    const plan = await generateRecoveryPlan(user.id);
+    const plan = await generateRecoveryPlan(user.id, { planLength });
     
     return NextResponse.json({ 
       plan,

@@ -31,6 +31,7 @@ type CurrentPlan = {
 
 export default function RecoveryPlanWidget() {
   const [todaysTask, setTodaysTask] = useState<TodaysTask>(null);
+  const [todaysTasks, setTodaysTasks] = useState<Array<{ id?: string; completed?: boolean; category?: string; action?: string; rationale?: string; date?: string; scheduled_for?: string; scheduled_at?: string }>>([]);
   const [currentPlan, setCurrentPlan] = useState<CurrentPlan>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [isMarkingComplete, setIsMarkingComplete] = useState(false);
@@ -46,6 +47,20 @@ export default function RecoveryPlanWidget() {
         const data = await response.json();
         setTodaysTask(data.todaysTask);
         setCurrentPlan(data.currentPlan);
+
+        // Derive all tasks for today from currentPlan if present
+        if (data.currentPlan?.recovery_plan_tasks) {
+          const allTasks = data.currentPlan.recovery_plan_tasks as Array<{ id?: string; completed?: boolean; category?: string; action?: string; rationale?: string; date?: string; scheduled_for?: string; scheduled_at?: string }>;
+          // naive filter: tasks where completed === false or scheduled for today if date provided
+          // If API provides date per task, prefer filtering by today's date; fallback to incomplete tasks
+          const todayISO = new Date().toISOString().slice(0, 10)
+          const filtered = allTasks.filter((t) => {
+            const d = (t.date || t.scheduled_for || t.scheduled_at || "").slice?.(0,10)
+            if (d) return d === todayISO
+            return t.completed === false || !t.completed
+          })
+          setTodaysTasks(filtered)
+        }
         
         // Calculate day number and total days
         if (data.currentPlan?.recovery_plan_tasks) {
@@ -117,18 +132,18 @@ export default function RecoveryPlanWidget() {
 
   const getCategoryIcon = (category: string) => {
     switch (category) {
-      case 'breathwork': return '🫁';
-      case 'movement': return '🚶';
-      case 'sleep': return '😴';
-      case 'nutrition': return '🥗';
-      case 'mindset': return '🧠';
-      default: return '✨';
+      case 'breathwork': return <span aria-label="breathwork" role="img">🫁</span>;
+      case 'movement': return <span aria-label="movement" role="img">🚶</span>;
+      case 'sleep': return <span aria-label="sleep" role="img">😴</span>;
+      case 'nutrition': return <span aria-label="nutrition" role="img">🥗</span>;
+      case 'mindset': return <span aria-label="mindset" role="img">🧠</span>;
+      default: return <span aria-label="default" role="img">✨</span>;
     }
   };
 
   if (isLoading) {
     return (
-      <Card className="border-0 shadow-lg">
+      <Card className="border-0 shadow-lg h-full">
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
             <Calendar className="w-5 h-5 text-green-600" />
@@ -145,14 +160,14 @@ export default function RecoveryPlanWidget() {
   }
 
   return (
-    <Card className="border-0 shadow-lg">
+    <Card className="border-0 shadow-lg h-full flex flex-col">
       <CardHeader>
         <CardTitle className="flex items-center gap-2">
           <Calendar className="w-5 h-5 text-green-600" />
           Recovery Plan
         </CardTitle>
       </CardHeader>
-      <CardContent className="space-y-4">
+      <CardContent className="space-y-4 flex-1 flex flex-col">
         {todaysTask ? (
           <>
             {/* Progress Indicator */}
@@ -168,73 +183,61 @@ export default function RecoveryPlanWidget() {
                 <ExternalLink className="w-3 h-3" />
               </Link>
             </div>
-
-            {/* Today's Task */}
-            <div className={`
-              border rounded-lg p-4 transition-all duration-200
-              ${todaysTask.completed 
-                ? 'bg-green-50 border-green-200' 
-                : 'bg-blue-50 border-blue-200'
-              }
-            `}>
-              <div className="flex items-start gap-3">
-                <div className="mt-1">
-                  {todaysTask.completed ? (
-                    <CheckCircle2 className="w-5 h-5 text-green-600" />
-                  ) : (
-                    <Circle className="w-5 h-5 text-blue-600" />
-                  )}
-                </div>
-                
-                <div className="flex-1 space-y-2">
-                  <div className="flex items-center gap-2">
-                    <span className="text-lg">
-                      {getCategoryIcon(todaysTask.category)}
-                    </span>
-                    <span className="text-sm font-medium text-gray-900 capitalize">
-                      {todaysTask.category}
-                    </span>
-                  </div>
-                  
-                  <div>
-                    <h4 className="font-medium text-gray-900 mb-1">
-                      {todaysTask.action}
-                    </h4>
-                    <p className="text-sm text-gray-600">
-                      {todaysTask.rationale}
-                    </p>
-                  </div>
-                  
-                  {!todaysTask.completed && (
-                    <Button 
-                      onClick={handleMarkComplete}
-                      disabled={isMarkingComplete}
-                      size="sm"
-                      className="w-full bg-blue-600 hover:bg-blue-700 text-white"
-                    >
-                      {isMarkingComplete ? (
-                        <>
-                          <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                          Marking Complete...
-                        </>
+            {/* Today's Tasks List */}
+            <div className="space-y-3">
+              {(todaysTasks.length ? todaysTasks : [todaysTask]).map((task, idx) => (
+                <div
+                  key={task.id || idx}
+                  className={`border rounded-lg p-4 transition-colors ${
+                    task.completed ? 'bg-green-50 border-green-200' : 'bg-blue-50 border-blue-200'
+                  }`}
+                >
+                  <div className="flex items-start gap-3">
+                    <div className="mt-1">
+                      {task.completed ? (
+                        <CheckCircle2 className="w-5 h-5 text-green-600" />
                       ) : (
-                        <>
-                          <CheckCircle2 className="w-4 h-4 mr-2" />
-                          Mark as Done
-                        </>
+                        <Circle className="w-5 h-5 text-blue-600" />
                       )}
-                    </Button>
-                  )}
-                  
-                  {todaysTask.completed && (
-                    <div className="text-center py-2">
-                      <span className="text-green-600 font-medium">
-                        ✅ Completed! Great work today.
-                      </span>
                     </div>
-                  )}
+                    <div className="flex-1 space-y-2">
+                      <div className="flex items-center gap-2">
+                        <span className="text-lg">{getCategoryIcon(task.category || '')}</span>
+                        <span className="text-sm font-medium text-gray-900 capitalize">{task.category || ''}</span>
+                      </div>
+                      <div>
+                        <h4 className="font-medium text-gray-900 mb-1">{task.action}</h4>
+                        <p className="text-sm text-gray-600">{task.rationale}</p>
+                      </div>
+                      {!task.completed && task.id === todaysTask?.id && (
+                        <Button
+                          onClick={handleMarkComplete}
+                          disabled={isMarkingComplete}
+                          size="sm"
+                          className="w-full bg-blue-600 hover:bg-blue-700 text-white"
+                        >
+                          {isMarkingComplete ? (
+                            <>
+                              <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                              Marking Complete...
+                            </>
+                          ) : (
+                            <>
+                              <CheckCircle2 className="w-4 h-4 mr-2" />
+                              Mark as Done
+                            </>
+                          )}
+                        </Button>
+                      )}
+                      {task.completed && (
+                        <div className="text-center py-2">
+                          <span className="text-green-600 font-medium">✅ Completed! Great work today.</span>
+                        </div>
+                      )}
+                    </div>
+                  </div>
                 </div>
-              </div>
+              ))}
             </div>
 
             {/* Plan Title */}

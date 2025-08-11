@@ -1,5 +1,8 @@
-import { ChatOpenAI } from "@langchain/openai";
-import { HumanMessage, SystemMessage } from "@langchain/core/messages";
+/* eslint-disable @typescript-eslint/no-unused-vars */
+
+import { createResponseWithDefaults, getToolCalls, type ResponseLike, defaultMaxOutputTokensForLength } from "@/lib/llm/openaiClient";
+import { z } from "zod";
+import { zodPlanPayload } from "@/lib/llm/schemas/planTool";
 import { supabaseAdmin } from "@/utils/supabase/admin";
 import { mapTasksToTimes } from '@/lib/circadian/scheduler'
 
@@ -20,8 +23,11 @@ export type DayTask = {
   type: 'movement' | 'breathwork' | 'nutrition' | 'mindset' | 'sleep';
   title: string;              // concise suggestion
   rationale: string;          // short explanation of benefit
-  time_suggestion?: 'morning' | 'afternoon' | 'evening' | 'flexible';
+  time_suggestion?: 'morning' | 'midday' | 'afternoon' | 'evening' | 'flexible';
   recipe_id?: string;         // only for nutrition tasks
+  duration_minutes?: number;
+  evidence_ids?: string[];
+  slot_hint?: string;
 };
 
 type BiometricData = {
@@ -233,70 +239,46 @@ function buildPersonalizedGuidance(onboardingData: OnboardingData | null): strin
     "No specific personalization data available. Create a balanced, general wellness plan.";
 }
 
-// Generate recovery plan with LangChain
+type PlanningOptions = { planLength?: 3 | 5 | 7 };
+
+// Generate recovery plan with OpenAI Responses API
 async function generatePlanWithLLM(
   biometricData: BiometricData,
-  onboardingData: OnboardingData | null
-): Promise<PlanPayload> {
-  // Set up LangChain with OpenAI
-  const model = new ChatOpenAI({
-    modelName: "gpt-4.1-mini",
-    temperature: 0.7,
-    maxTokens: 1200,
-    openAIApiKey: process.env.OPENAI_API_KEY,
-  });
-
+  onboardingData: OnboardingData | null,
+  circadian: { chronotype?: string | null; wake_time?: string | null; bedtime?: string | null; tz: string },
+  opts: PlanningOptions
+): Promise<{ plan: PlanPayload; requestId?: string; raw?: unknown }> {
   // Build personalized system prompt based on onboarding data
   const personalizedGuidance = buildPersonalizedGuidance(onboardingData);
   
   // Construct dynamic system prompt
-  const systemPrompt = `You are ROOTED, a gentle, evidence-based wellness coach. Generate a 3- to 5-day recovery plan based on the user's biometric data and their personal wellness preferences.
+  const systemPrompt = `You are ROOTED, an evidence-based wellness coach.
 
 ${personalizedGuidance}
 
-Your goal is to help them restore nervous system balance through simple, actionable daily practices that align with their lifestyle and preferences. Each day should include one focused action and a clear rationale explaining why it will help them specifically.
+Return a recovery plan with fully scheduled tasks.
 
-IMPORTANT: Include a brief description that mentions this plan is personalized based on their wellness profile and any available biometric data.
+REQUIRED STRUCTURE:
+- Return exactly 3-7 days. Do not return more or fewer days.
+- Every task MUST include scheduled_at as a UTC ISO timestamp (ends with Z).
+- For each task, ALWAYS include evidence_ids as an array (can be empty).
+- Every task MUST include duration_minutes (5–40). Movement may be up to 40; others 5–20.
+- slot_hint is optional for template compatibility.
 
-Guidelines:
-- Plans should be 3-5 days long
-- Each day should have 2-4 tasks from different wellness domains
-- Keep tasks simple and achievable (5-20 minutes each)
-- Focus on evidence-based practices for recovery
-- Tailor to their current biometric state and preferences
-- Use warm, encouraging language that acknowledges their specific situation
-- Task types: movement, breathwork, mindset, sleep, nutrition
-- Include time_suggestion based on their availability and task type
-- Weight activities toward their preferred focus area
-- Include optional reflection_prompt for deeper engagement
-- Never suggest anything medical or dangerous
-- Ensure tasks complement each other within each day
-
-You must respond with a valid JSON object with this exact structure:
-{
-  "title": "3-Day Nervous System Reset",
-  "description": "A personalized plan based on your wellness profile and biometric insights",
-  "days": [
-    {
-      "date": "2025-01-15",
-      "tasks": [
-        {
-          "type": "breathwork",
-          "title": "Box breathing 5 minutes",
-          "rationale": "Activates parasympathetic nervous system and reduces cortisol",
-          "time_suggestion": "evening"
-        },
-        {
-          "type": "sleep",
-          "title": "Wind-down routine with dim lights",
-          "rationale": "Supports natural melatonin production for better sleep quality",
-          "time_suggestion": "evening"
-        }
-      ],
-      "reflection_prompt": "What helped you feel most grounded today?"
-    }
-  ]
-}`;
+COMPACTNESS:
+- Return MINIFIED JSON (no spaces or newlines).
+- Titles ≤ 60 chars. Rationales ≤ 140 chars.
+- 3–4 tasks per day.
+- evidence_ids may be [].
+- recipe_id: null unless a nutrition item truly needs it.
+- Always include time_suggestion (morning/midday/afternoon/evening/flexible or null) and slot_hint (string or null).
+- Keep JSON minimal; no extra fields.
+- Respect availability, chronotype, wake, and bedtime when provided.
+- Never schedule before wake or after bedtime.
+- Morning items ≥ 30 min after wake.
+- Evening/sleep-prep items 60–120 min before bedtime (avoid absurd times like 3pm screen-off).
+- Keep tasks simple (5–20 minutes), safe, non-medical.
+- Use warm, concise language.`;
 
   // Create context from biometric data
   const biometricContext = [];
@@ -386,51 +368,160 @@ You must respond with a valid JSON object with this exact structure:
   tomorrow.setDate(tomorrow.getDate() + 1);
   const startDate = tomorrow.toISOString().split('T')[0];
 
+  const planLength = opts.planLength ?? 3;
+
   const userMessage = `Create a personalized recovery plan starting ${startDate}.
 
 ${biometricContext.join('\n')}
 
 ${onboardingContext.join('\n')}
 
-Based on this information, create a focused recovery plan to help restore balance and improve wellbeing. Include the start date in your day entries.`;
+SCHEDULE GUIDANCE:
+- Chronotype: ${circadian.chronotype ?? 'unknown'}
+- Wake: ${circadian.wake_time ?? 'unknown'}
+- Bedtime: ${circadian.bedtime ?? 'unknown'}
+- User timezone: ${circadian.tz}
+
+CONSTRAINTS:
+- Exactly ${planLength} days
+- Each task requires: type, title, rationale, scheduled_at (UTC Z), duration_minutes (5–40)
+- evidence_ids is optional (may be empty)
+
+Return the plan ONLY by calling the tool. Never print JSON in text. Never include code fences. Call the tool now. Do not write any additional text.`;
+
+  const { openAIToolDefinition } = await import("@/lib/llm/schemas/planTool");
+  type SchemaObj = { type?: string; properties?: Record<string, unknown> };
+  const paramsObj = (openAIToolDefinition as { parameters?: SchemaObj })?.parameters;
+  const rootType = paramsObj?.type;
+  const props: Record<string, unknown> = paramsObj?.properties ?? {};
+  const days = props['days'] as { items?: unknown } | undefined;
+  const daysItems = (days?.items ?? undefined) as { properties?: Record<string, unknown> } | undefined;
+  const dayProps: Record<string, unknown> | undefined = daysItems?.properties;
+  const tasks = (dayProps ? (dayProps['tasks'] as { items?: unknown } | undefined) : undefined);
+  const tasksItems = (tasks?.items ?? undefined) as { required?: unknown } | undefined;
+  const reqUnknown = tasksItems?.required;
+  const taskRequired = Array.isArray(reqUnknown) ? (reqUnknown as unknown[]).filter((k): k is string => typeof k === 'string') : [];
+  console.debug("TOOL_PARAMETERS_TYPE", rootType);
+  const taskKeys = Object.keys(((tasksItems as unknown as { properties?: Record<string, unknown> })?.properties) ?? {});
+  console.debug("TOOL_TASK_KEYS", taskKeys);
+  console.debug("TOOL_TASK_REQUIRED", taskRequired);
+
+  const baseMax = defaultMaxOutputTokensForLength(planLength);
+  console.debug('LLM_MAX_OUTPUT_TOKENS', baseMax);
+  const resp = await createResponseWithDefaults({
+    // Use instructions instead of system per Responses API
+    instructions: systemPrompt,
+    input: [{ role: "user", content: userMessage }],
+    tools: [openAIToolDefinition as unknown as { type: "function"; name: string; description?: string; strict?: boolean; parameters: Record<string, unknown> }],
+    // Constrain tool usage
+    tool_choice: { type: "function", name: (openAIToolDefinition as { name: string }).name },
+    parallel_tool_calls: false,
+    //temperature: 0.4,
+    max_output_tokens: baseMax,
+  });
+
+  const requestId = (resp as { id?: string }).id;
+  let toolCalls = getToolCalls(resp as unknown as ResponseLike);
+  if (!toolCalls.length) {
+    throw new Error('NoToolCallError');
+  }
+  // Use the last call if multiple
+  let call = toolCalls[toolCalls.length - 1];
+  let rawArgs = call.arguments;
+  let parsedArgs: unknown;
+  try {
+    parsedArgs = JSON.parse(rawArgs);
+  } catch {
+    // Attempt JSON repair and retry parse
+    const { repairJson } = await import("@/lib/llm/jsonRepair");
+    const repaired = repairJson(rawArgs);
+    try {
+      parsedArgs = JSON.parse(repaired);
+    } catch {
+      console.warn('MalformedToolArgumentsError', {
+        request_id: requestId,
+        arg_len: rawArgs?.length ?? 0,
+        head: rawArgs?.slice(0, 200),
+        tail: rawArgs?.slice(-200),
+      })
+      // Retry once with corrective user nudge
+      const retry = await createResponseWithDefaults({
+        instructions: systemPrompt,
+        input: [
+          { role: 'user', content: userMessage },
+          { role: 'user', content: 'The previous tool call had malformed JSON. Call the same tool again. Do not include any text, only the tool call.' }
+        ],
+        tools: [openAIToolDefinition as unknown as { type: "function"; name: string; description?: string; strict?: boolean; parameters: Record<string, unknown> }],
+        tool_choice: {
+          type: 'allowed_tools',
+          mode: 'required',
+          tools: [{ type: 'function', name: (openAIToolDefinition as { name: string }).name }],
+        },
+        parallel_tool_calls: false,
+        max_output_tokens: 1800,
+      })
+      toolCalls = getToolCalls(retry as unknown as ResponseLike)
+      if (!toolCalls.length) throw new Error('NoToolCallError')
+      call = toolCalls[toolCalls.length - 1]
+      rawArgs = call.arguments
+      parsedArgs = JSON.parse(rawArgs)
+    }
+  }
 
   try {
-    const messages = [
-      new SystemMessage(systemPrompt),
-      new HumanMessage(userMessage)
-    ];
-
-    const response = await model.invoke(messages);
-    const content = response.content as string;
-
-    // Parse JSON response
-    const jsonMatch = content.match(/\{[\s\S]*\}/);
-    if (!jsonMatch) {
-      throw new Error('No JSON found in LLM response');
+    const validated = zodPlanPayload.parse(parsedArgs);
+    if ((validated.days?.length ?? 0) !== planLength) {
+      const retry = await createResponseWithDefaults({
+        instructions: systemPrompt,
+        input: [
+          { role: 'user', content: userMessage },
+          { role: 'user', content: `Your last arguments contained ${validated.days?.length ?? 0} days but exactly ${planLength} are required. Please return a corrected tool call with exactly ${planLength} days.` }
+        ],
+        tools: [openAIToolDefinition as unknown as { type: "function"; name: string; description?: string; strict?: boolean; parameters: Record<string, unknown> }],
+        tool_choice: { type: 'function', name: (openAIToolDefinition as { name: string }).name },
+        parallel_tool_calls: false,
+        max_output_tokens: baseMax + 800,
+      })
+      const retryCalls = getToolCalls(retry as unknown as ResponseLike)
+      if (!retryCalls.length) throw new Error('NoToolCallError')
+      const finalCall = retryCalls[retryCalls.length - 1]
+      const finalArgs = JSON.parse(finalCall.arguments)
+      const finalValidated = zodPlanPayload.parse(finalArgs)
+      if ((finalValidated.days?.length ?? 0) !== planLength) throw new Error('WrongPlanLength')
+      const normalized = normalizeDatesAndTimes(finalValidated, startDate);
+      return { plan: normalized, requestId, raw: finalValidated };
     }
-
-    const planData = JSON.parse(jsonMatch[0]) as PlanPayload;
-
-    // Validate the response structure
-    if (!planData.title || !planData.days || !Array.isArray(planData.days)) {
-      throw new Error('Invalid plan structure from LLM');
+    const normalized = normalizeDatesAndTimes(validated, startDate);
+    return { plan: normalized, requestId, raw: validated };
+  } catch (e) {
+    if (e instanceof (await import('zod')).ZodError) {
+      const issues = e.issues.map(i => ({ path: i.path.join('.'), message: i.message }))
+      console.warn('Zod validation errors (redacted):', issues)
+      // Retry once with corrective user nudge
+      const retry = await createResponseWithDefaults({
+        instructions: systemPrompt,
+        input: [
+          { role: 'user', content: userMessage },
+          { role: 'user', content: `Your last arguments failed validation for these fields: ${issues.map(i=>i.path).join(', ')}. Please return a corrected tool call that conforms exactly to the function schema. All timestamps must end with Z.` }
+        ],
+        tools: [openAIToolDefinition as unknown as { type: "function"; name: string; description?: string; strict?: boolean; parameters: Record<string, unknown> }],
+        tool_choice: {
+          type: 'allowed_tools',
+          mode: 'required',
+          tools: [{ type: 'function', name: (openAIToolDefinition as { name: string }).name }],
+        },
+        parallel_tool_calls: false,
+        max_output_tokens: baseMax + 800,
+      })
+      const retryCalls = getToolCalls(retry as unknown as ResponseLike)
+      if (!retryCalls.length) throw e
+      const finalCall = retryCalls[retryCalls.length - 1]
+      const finalArgs = JSON.parse(finalCall.arguments)
+      const finalValidated = zodPlanPayload.parse(finalArgs)
+      const normalized = normalizeDatesAndTimes(finalValidated, startDate)
+      return { plan: normalized, requestId }
     }
-
-    // Ensure dates are properly formatted and sequential
-    planData.days = planData.days.map((day, index) => {
-      const planDate = new Date(tomorrow);
-      planDate.setDate(planDate.getDate() + index);
-      return {
-        ...day,
-        date: planDate.toISOString().split('T')[0]
-      };
-    });
-
-    return planData;
-  } catch (error) {
-    console.error('Error generating plan with LLM:', error);
-    // Return fallback plan
-    return generateFallbackPlan(startDate);
+    throw e
   }
 }
 
@@ -503,7 +594,11 @@ function generateFallbackPlan(startDate: string): PlanPayload {
 }
 
 // Save plan to database
-async function savePlanToDatabase(userId: string, planData: PlanPayload): Promise<{ planId: string }> {
+async function savePlanToDatabase(
+  userId: string,
+  planData: PlanPayload,
+  meta?: { planLength?: number; requestId?: string; used_llm_scheduler?: boolean; agent_version?: string }
+): Promise<{ planId: string }> {
   try {
     const startDate = planData.days[0]?.date;
     const endDate = planData.days[planData.days.length - 1]?.date;
@@ -516,7 +611,14 @@ async function savePlanToDatabase(userId: string, planData: PlanPayload): Promis
         title: planData.title,
         description: planData.description || null,
         start_date: startDate,
-        end_date: endDate
+        end_date: endDate,
+        length_days: meta?.planLength ?? planData.days.length,
+        metadata: {
+          request_id: meta?.requestId ?? null,
+          used_llm_scheduler: meta?.used_llm_scheduler ?? true,
+          agent_version: meta?.agent_version ?? 'phase4',
+          params: { length_days: meta?.planLength ?? planData.days.length },
+        }
       })
       .select('id')
       .single();
@@ -539,6 +641,10 @@ async function savePlanToDatabase(userId: string, planData: PlanPayload): Promis
         time_suggestion: task.time_suggestion || null,
         recipe_id: task.recipe_id || null,
         scheduled_at: (task as unknown as { scheduled_at?: string }).scheduled_at || null,
+        duration_minutes: (task as unknown as { duration_minutes?: number }).duration_minutes ?? null,
+        slot_hint: (task as unknown as { slot_hint?: string }).slot_hint ?? null,
+        evidence_ids: (task as unknown as { evidence_ids?: string[] }).evidence_ids ?? null,
+        task_payload: task as unknown as Record<string, unknown>,
       }))
     );
 
@@ -581,9 +687,10 @@ async function savePlanToDatabase(userId: string, planData: PlanPayload): Promis
 }
 
 // Main function to generate recovery plan
-export async function generateRecoveryPlan(userId: string): Promise<PlanPayload> {
+export async function generateRecoveryPlan(userId: string, options?: PlanningOptions): Promise<PlanPayload> {
   try {
-    console.log(`Generating recovery plan for user: ${userId}`);
+    const planLength = options?.planLength ?? 3;
+    console.log(`PHASE4 Generating recovery plan for user: ${userId} planLength=${planLength}`);
     
     // Step 1: Load recent biometric data
     const biometricData = await loadRecentBiometricData(userId);
@@ -591,11 +698,7 @@ export async function generateRecoveryPlan(userId: string): Promise<PlanPayload>
     // Step 2: Load onboarding data
     const onboardingData = await loadOnboardingData(userId);
     
-    // Step 3: Generate plan with LLM
-    let planData = await generatePlanWithLLM(biometricData, onboardingData);
-
-    // Step 3.1: Deterministic scheduling using circadian + availability + tz
-    // Load circadian profile
+    // Load circadian profile (used by LLM and potential fallback)
     const { data: circ } = await supabaseAdmin
       .from('user_circadian_profiles')
       .select('chronotype, wake_time, bedtime')
@@ -607,28 +710,127 @@ export async function generateRecoveryPlan(userId: string): Promise<PlanPayload>
       .eq('id', userId)
       .maybeSingle()
     const tz = userRow?.timezone || 'UTC'
-    if (circ?.chronotype && circ?.wake_time && circ?.bedtime) {
-      try {
-        planData = mapTasksToTimes(planData, {
+    const useLlmScheduler = (process.env.USE_LLM_SCHEDULER ?? 'true').toLowerCase() !== 'false'
+
+    let planData: PlanPayload
+    let requestId: string | undefined
+    try {
+      const { plan, requestId: rid } = await generatePlanWithLLM(biometricData, onboardingData, {
+        chronotype: circ?.chronotype ?? null,
+        wake_time: circ?.wake_time ?? null,
+        bedtime: circ?.bedtime ?? null,
+        tz,
+      }, { planLength })
+      planData = plan
+      requestId = rid
+      console.log(`LLM schedule path used${requestId ? `, request_id=${requestId}` : ''}`)
+    } catch (e) {
+      if (e instanceof z.ZodError) {
+        console.warn('Zod validation errors (redacted):', e.issues.map(i => ({ path: i.path, message: i.message })))
+      } else {
+        console.warn('LLM scheduling error:', (e as Error)?.message)
+      }
+      const startDate = new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString().split('T')[0]
+      if (!useLlmScheduler && circ?.chronotype && circ?.wake_time && circ?.bedtime) {
+        console.warn('Zod validation failed; using deterministic mapper (feature flag).')
+        const basePlan = generateFallbackPlan(startDate)
+        try {
+          planData = mapTasksToTimes(basePlan, {
           chronotype: circ.chronotype as 'lark'|'neutral'|'owl',
           wakeTime: String(circ.wake_time),
           bedtime: String(circ.bedtime),
           tz,
           availability: (onboardingData?.availability as 'morning'|'midday'|'afternoon'|'evening'|'flexible' | undefined) || 'flexible',
         })
-      } catch (e) {
-        console.warn('Scheduling failed; proceeding without scheduled_at:', e)
+    } catch {
+          console.warn('Deterministic scheduling failed, falling back to unscheduled plan.')
+          planData = basePlan
+        }
+      } else {
+        console.warn('LLM scheduling invalid; falling back to default plan.')
+        planData = generateFallbackPlan(startDate)
       }
     }
     
     // Step 4: Save to database
-    await savePlanToDatabase(userId, planData);
+    await savePlanToDatabase(userId, planData, { planLength, requestId, used_llm_scheduler: true, agent_version: 'phase4' });
     
     return planData;
   } catch (error) {
     console.error('Error in generateRecoveryPlan:', error);
     throw error;
   }
+}
+
+// Normalize: ensure sequential dates start from tomorrow and scheduled_at dates align to day.date
+type RawTask = {
+  type: DayTask['type'];
+  title: string;
+  rationale: string;
+  time_suggestion?: 'morning' | 'midday' | 'afternoon' | 'evening' | 'flexible' | null;
+  recipe_id?: string | null;
+  scheduled_at?: string | null;
+  duration_minutes?: number | null;
+  evidence_ids?: string[] | null;
+  slot_hint?: 'wake' | 'mid_morning' | 'midday' | 'afternoon' | 'evening' | 'pre_sleep' | null;
+};
+type RawDay = { date?: string; tasks: RawTask[]; reflection_prompt?: string | null };
+type RawPlan = { title: string; description?: string | null; days: RawDay[] };
+
+function normalizeDatesAndTimes(inputPlan: RawPlan, startDate: string): PlanPayload {
+  const base = new Date(startDate + 'T00:00:00.000Z');
+
+  const normalizedDays: DayPlan[] = inputPlan.days.map((rawDay, index) => {
+    const d = new Date(base);
+    d.setUTCDate(d.getUTCDate() + index);
+    const ymd = d.toISOString().slice(0, 10);
+
+    const tasks = rawDay.tasks.map((rawTask) => {
+      const isoIn: string | undefined = rawTask?.scheduled_at ?? undefined;
+      let dt: Date | undefined;
+      if (isoIn) {
+        const parsed = new Date(isoIn);
+        dt = isNaN(parsed.getTime()) ? undefined : parsed;
+      }
+      // Default to 12:00Z if missing/invalid
+      if (!dt) dt = new Date(`${ymd}T12:00:00.000Z`);
+
+      // Align date to this day's date but preserve UTC time components
+      const hours = dt.getUTCHours();
+      const minutes = dt.getUTCMinutes();
+      const seconds = dt.getUTCSeconds();
+      const ms = dt.getUTCMilliseconds();
+      const aligned = new Date(`${ymd}T00:00:00.000Z`);
+      aligned.setUTCHours(hours, minutes, seconds, ms);
+      const scheduled_at = aligned.toISOString();
+
+      // Coerce nullable optionals to undefined to match local TS types
+      const time_suggestion = (rawTask?.time_suggestion ?? null) as DayTask['time_suggestion'] | undefined;
+      const recipe_id = rawTask?.recipe_id ?? undefined;
+      const duration_minutes = rawTask?.duration_minutes ?? undefined;
+      const evidence_ids = rawTask?.evidence_ids ?? [];
+      const slot_hint = rawTask?.slot_hint ?? undefined;
+
+      return {
+        type: rawTask.type,
+        title: rawTask.title,
+        rationale: rawTask.rationale,
+        time_suggestion,
+        recipe_id,
+        duration_minutes,
+        evidence_ids,
+        slot_hint,
+        // Keep scheduled_at for DB insertion via cast in savePlanToDatabase
+        scheduled_at,
+      } as unknown as DayTask & { scheduled_at: string };
+    });
+
+    const reflection_prompt = rawDay?.reflection_prompt ?? undefined;
+    return { date: ymd, tasks: tasks as unknown as DayTask[], reflection_prompt } as DayPlan;
+  });
+
+  const description = inputPlan?.description ?? undefined;
+  return { title: inputPlan.title, description, days: normalizedDays } as PlanPayload;
 }
 
 // Helper function to get user's current active plan

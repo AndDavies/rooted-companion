@@ -31,17 +31,22 @@ export default async function DashboardPage() {
         </p>
       </div>
 
-      {/* Featured Sections */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 max-w-5xl mx-auto">
-        <DailyPulseWidget />
-        <RecoveryPlanWidget />
-      </div>
-
-      {/* User Info Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6">
-        <AccountDetailsWidget user={user} />
-        <BiometricSyncWidget userId={user.id} />
-        <RecoveryStatsWidget />
+      {/* Three-column layout on large screens: [Pulse] [Plan] [Stats+Sync+Account] */}
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 items-stretch">
+        {/* Col 1: Today's Pulse */}
+        <div className="h-full">
+          <DailyPulseWidget />
+        </div>
+        {/* Col 2: Recovery Plan */}
+        <div className="h-full">
+          <RecoveryPlanWidget />
+        </div>
+        {/* Col 3: Stacked widgets */}
+        <div className="space-y-6">
+          <RecoveryStatsWidget />
+          <BiometricSyncWidget userId={user.id} />
+          <AccountDetailsWidget user={user} />
+        </div>
       </div>
 
       {/* Quick Actions */}

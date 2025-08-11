@@ -1,7 +1,8 @@
 'use client';
 
-import { useState } from 'react';
+import React, { useState } from 'react';
 import { Button } from '@/components/ui/button';
+import { Select } from '@/components/ui/select';
 import { CheckCircle2, RefreshCw, Calendar, Loader2, Save } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 
@@ -23,11 +24,37 @@ export default function PlanningActions({
   reflectionPrompt
 }: PlanningActionsProps) {
   const [isLoading, setIsLoading] = useState(false);
+  const [planLength, setPlanLength] = useState<3|5|7>(3);
   const [isCompleted, setIsCompleted] = useState(false);
   const [reflectionText, setReflectionText] = useState(currentReflection || '');
   const [isSavingReflection, setIsSavingReflection] = useState(false);
   const [reflectionSaved, setReflectionSaved] = useState(false);
   const router = useRouter();
+  // Local notify fallback to avoid provider requirement during testing
+  const notify = (opts: { title: string; description?: string; variant?: 'destructive' | 'default' }) => {
+    // If a global toast is available, use it; otherwise console.log
+    try {
+      // @ts-expect-error optional global
+      if (typeof window !== 'undefined' && window.toast) window.toast(opts)
+      else console.log(`[${opts.variant ?? 'default'}] ${opts.title}: ${opts.description ?? ''}`)
+    } catch {
+      console.log(`[${opts.variant ?? 'default'}] ${opts.title}: ${opts.description ?? ''}`)
+    }
+  }
+
+  // Persist selections in localStorage
+  React.useEffect(() => {
+    try {
+      const savedRaw = localStorage.getItem('planGenOpts') || '{}';
+      const saved: { planLength?: 3|5|7 } = JSON.parse(savedRaw);
+      if (saved.planLength && [3,5,7].includes(saved.planLength)) setPlanLength(saved.planLength);
+    } catch {}
+  }, []);
+  React.useEffect(() => {
+    try {
+      localStorage.setItem('planGenOpts', JSON.stringify({ planLength }));
+    } catch {}
+  }, [planLength]);
 
   const handleMarkComplete = async () => {
     if (!taskId) return;
@@ -66,16 +93,18 @@ export default function PlanningActions({
         headers: {
           'Content-Type': 'application/json',
         },
+        body: JSON.stringify({ planLength }),
       });
 
       if (response.ok) {
         // Refresh the page to show the new plan
         router.refresh();
+        notify({ title: 'Plan generated', description: 'Your recovery plan was created successfully.' });
       } else {
-        console.error('Failed to generate plan');
+        notify({ title: 'Failed to generate plan', description: 'Please try again in a moment.', variant: 'destructive' });
       }
-    } catch (error) {
-      console.error('Error generating plan:', error);
+  } catch {
+      notify({ title: 'Error generating plan', description: 'Please try again in a moment.', variant: 'destructive' });
     } finally {
       setIsLoading(false);
     }
@@ -115,24 +144,32 @@ export default function PlanningActions({
 
   if (isGenerateButton) {
     return (
-      <Button 
-        onClick={handleGeneratePlan}
-        disabled={isLoading}
-        size="lg"
-        className="bg-green-600 hover:bg-green-700 text-white"
-      >
-        {isLoading ? (
-          <>
-            <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-            Generating Plan...
-          </>
-        ) : (
-          <>
-            <Calendar className="w-4 h-4 mr-2" />
-            Generate My Recovery Plan
-          </>
-        )}
-      </Button>
+      <div className="flex flex-col sm:flex-row gap-3 items-stretch sm:items-center">
+        <Select aria-labelledby="length-label" disabled={isLoading} value={planLength} onChange={(e) => setPlanLength(Number(e.target.value) as 3|5|7)} label="Plan length">
+          <option value={3}>3 days</option>
+          <option value={5}>5 days</option>
+          <option value={7}>7 days</option>
+        </Select>
+        {/* Mode removed per Phase 4 polish; defaults to working behavior */}
+        <Button 
+          onClick={handleGeneratePlan}
+          disabled={isLoading}
+          size="lg"
+          className="bg-green-600 hover:bg-green-700 text-white"
+        >
+          {isLoading ? (
+            <>
+              <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+              Generating Plan...
+            </>
+          ) : (
+            <>
+              <Calendar className="w-4 h-4 mr-2" />
+              Generate My Recovery Plan
+            </>
+          )}
+        </Button>
+      </div>
     );
   }
 
