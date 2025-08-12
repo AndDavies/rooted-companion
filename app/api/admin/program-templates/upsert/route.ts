@@ -13,6 +13,7 @@ const ProgramTemplate = z.object({
     items: z.array(z.object({
       slot_hint: z.string().min(2),
       task_ref: z.string().min(2),
+      task_id: z.string().uuid().optional(),
       default_duration: z.number().int().positive().optional(),
       notes: z.string().optional(),
     })),

@@ -21,7 +21,7 @@ export default function ProgramsClient({ templates }: { templates: ProgramTplRow
   const [editTpl, setEditTpl] = useState<ProgramTplRow | null>(null)
   const [rows, setRows] = useState<ProgramTplRow[]>(templates)
   // const [loading, setLoading] = useState(false)
-  const [drawer, setDrawer] = useState<{ open: boolean; name?: string; version?: number }>(() => ({ open: false }))
+  const [drawer, setDrawer] = useState<{ open: boolean; name?: string; version?: number; isPublic?: boolean }>(() => ({ open: false }))
   const refresh = () => window.location.reload()
 
   useEffect(() => { setRows(templates) }, [templates])
@@ -64,7 +64,14 @@ export default function ProgramsClient({ templates }: { templates: ProgramTplRow
         <tbody>
           {(rows.length ? rows : templates).map((t) => (
             <tr key={t.id} className="border-b last:border-0">
-              <td className="p-2">{t.name}</td>
+              <td className="p-2">
+                <span>{t.name}</span>
+                {Array.isArray(t.audience_tags) && t.audience_tags.includes('public') && (
+                  <span className="ml-2 inline-flex items-center px-2 py-0.5 rounded-full text-[11px] border bg-emerald-50 text-emerald-700 border-emerald-200 align-middle">
+                    Public
+                  </span>
+                )}
+              </td>
               <td className="p-2 font-mono">{t.version}</td>
               <td className="p-2">{typeof t.day_count === 'number' ? t.day_count : '-'}</td>
               <td className="p-2">{t.updated_at ? new Date(t.updated_at).toLocaleString() : ''}</td>
@@ -72,7 +79,7 @@ export default function ProgramsClient({ templates }: { templates: ProgramTplRow
                 <div className="flex items-center gap-2">
                   <button
                     className="px-3 py-1.5 rounded-full border text-sm whitespace-nowrap hover:bg-neutral-50"
-                    onClick={() => setDrawer({ open: true, name: t.name, version: t.version })}
+                    onClick={() => setDrawer({ open: true, name: t.name, version: t.version, isPublic: Array.isArray(t.audience_tags) && t.audience_tags.includes('public') })}
                   >
                     Load Preview
                   </button>
@@ -101,7 +108,12 @@ export default function ProgramsClient({ templates }: { templates: ProgramTplRow
             <div className="p-4 border-b flex items-center justify-between">
               <div>
                 <div className="text-sm text-neutral-500">Preview</div>
-                <div className="text-lg font-semibold">{drawer.name} <span className="text-neutral-500">v{drawer.version}</span></div>
+                <div className="text-lg font-semibold">
+                  {drawer.name} <span className="text-neutral-500">v{drawer.version}</span>
+                  {drawer.isPublic && (
+                    <span className="ml-2 inline-flex items-center px-2 py-0.5 rounded-full text-[11px] border bg-emerald-50 text-emerald-700 border-emerald-200 align-middle">Public</span>
+                  )}
+                </div>
               </div>
               <button className="px-2 py-1 rounded border" onClick={() => setDrawer({ open: false })}>Close</button>
             </div>

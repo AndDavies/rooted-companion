@@ -25,6 +25,7 @@ type TaskMin = {
 type BuilderItem = {
   slot_hint: 'wake' | 'mid_morning' | 'midday' | 'afternoon' | 'evening' | 'pre_sleep'
   task_ref: string
+  task_id?: string
   default_duration?: number
   notes?: string
 }
@@ -66,6 +67,7 @@ export function ProgramBuilderModal({
       ? initial.days.map(d => ({ day: d.day, items: d.items.map(it => ({
           slot_hint: (it.slot_hint as BuilderItem['slot_hint']) ?? 'midday',
           task_ref: it.task_ref,
+          task_id: (it as { task_id?: string }).task_id,
           default_duration: it.default_duration,
           notes: it.notes,
         })) }))
@@ -195,12 +197,13 @@ export function ProgramBuilderModal({
         audience_tags: audienceTags.length ? audienceTags : undefined,
         days: days.map(d => ({
           day: d.day,
-          items: d.items.map(it => ({
-            slot_hint: it.slot_hint,
-            task_ref: it.task_ref,
-            default_duration: typeof it.default_duration === 'number' ? it.default_duration : undefined,
-            notes: it.notes && it.notes.trim() ? it.notes.trim() : undefined,
-          }))
+            items: d.items.map(it => ({
+              slot_hint: it.slot_hint,
+              task_ref: it.task_ref,
+              task_id: it.task_id,
+              default_duration: typeof it.default_duration === 'number' ? it.default_duration : undefined,
+              notes: it.notes && it.notes.trim() ? it.notes.trim() : undefined,
+            }))
         }))
       }
 
@@ -359,17 +362,17 @@ export function ProgramBuilderModal({
                                 ))}
                               </datalist>
                               <div className="mt-1 relative">
-                                <Input placeholder="Search tasks by title or slug..." value={taskSearch} onChange={e => setTaskSearch(e.target.value)} />
+                               <Input placeholder="Search tasks by title or slug..." value={taskSearch} onChange={e => setTaskSearch(e.target.value)} />
                                 {taskSearch && (
                                   <div className="absolute left-0 right-0 mt-1 max-h-48 overflow-auto border rounded-md bg-white z-20 shadow">
                                     {filteredTasks.length === 0 ? (
                                       <div className="text-xs text-neutral-500 p-2">No matching tasks</div>
                                     ) : (
-                                      filteredTasks.slice(0, 30).map(t => (
+                                       filteredTasks.slice(0, 30).map(t => (
                                         <button
                                           key={`opt-${t.id}`}
                                           type="button"
-                                          onClick={() => setItemField(di, ii, 'task_ref', t.slug ?? '')}
+                                           onClick={() => { setItemField(di, ii, 'task_ref', t.slug ?? ''); setItemField(di, ii, 'task_id', t.id); }}
                                           className="w-full text-left px-2 py-1 text-sm hover:bg-neutral-50"
                                         >
                                           {(t.title ?? '')} <span className="text-neutral-500">({t.slug ?? ''})</span>

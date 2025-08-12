@@ -1,7 +1,7 @@
 'use client'
 
 import { Button } from '@/components/ui/button'
-import { User as UserIcon, Home, LogOut, Settings, Menu, X, Clipboard, TrendingUp } from 'lucide-react'
+import { User as UserIcon, Home, LogOut, Settings, Menu, X, Clipboard, TrendingUp, Library } from 'lucide-react'
 import Link from 'next/link'
 import { useState } from 'react'
 import { usePathname } from 'next/navigation'
@@ -67,6 +67,19 @@ export default function DashboardNav({ user }: DashboardNavProps) {
                 >
                   <Clipboard className="w-4 h-4" />
                   Act
+                </div>
+              </Link>
+              <Link href="/dashboard/act">
+                <div 
+                  className={`flex items-center gap-2 px-3 py-2 text-sm font-medium rounded-md transition-colors hover:bg-neutral-50 ${
+                    pathname?.startsWith('/dashboard/act') 
+                      ? 'text-neutral-900 border-b-2 border-neutral-900 rounded-b-none' 
+                      : 'text-neutral-600'
+                  }`}
+                  title="Browse Program Library"
+                >
+                  <Library className="w-4 h-4" />
+                  Program Library
                 </div>
               </Link>
               <Link href="/dashboard/progress">
@@ -157,6 +170,16 @@ export default function DashboardNav({ user }: DashboardNavProps) {
               >
                 <Clipboard className="w-4 h-4" />
                 Act
+              </Link>
+              <Link 
+                href="/dashboard/act"
+                className={`flex items-center gap-3 px-3 py-2 text-sm hover:bg-neutral-50 rounded-md transition-colors ${
+                  pathname?.startsWith('/dashboard/act') ? 'text-neutral-900 font-medium border-l-2 border-neutral-900' : 'text-neutral-700'
+                }`}
+                onClick={() => setIsMobileMenuOpen(false)}
+              >
+                <Library className="w-4 h-4" />
+                Program Library
               </Link>
               <Link 
                 href="/dashboard/progress"
