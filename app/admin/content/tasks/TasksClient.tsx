@@ -36,16 +36,16 @@ export default function TasksClient({ tasks }: { tasks: TaskMin[] }) {
           <SeedButtonClient />
         </div>
       </div>
-      <table className="w-full text-sm border rounded overflow-hidden">
+      <table className="w-full text-sm border rounded overflow-hidden table-fixed">
         <thead className="bg-neutral-50">
           <tr>
-            <th className="text-left p-2 border-b">Pillar</th>
-            <th className="text-left p-2 border-b">Slug</th>
-            <th className="text-left p-2 border-b">Title</th>
-            <th className="text-left p-2 border-b">Dur</th>
-            <th className="text-left p-2 border-b">Tags</th>
-            <th className="text-left p-2 border-b">Version</th>
-            <th className="text-left p-2 border-b">Actions</th>
+            <th className="text-left p-2 border-b w-[10%]">Pillar</th>
+            <th className="text-left p-2 border-b w-[20%]">Slug</th>
+            <th className="text-left p-2 border-b w-[28%]">Title</th>
+            <th className="text-left p-2 border-b w-[10%]">Dur</th>
+            <th className="text-left p-2 border-b w-[20%]">Tags</th>
+            <th className="text-left p-2 border-b w-[6%]">Ver</th>
+            <th className="text-left p-2 border-b w-[6%]">Actions</th>
           </tr>
         </thead>
         <tbody>
