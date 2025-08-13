@@ -1,8 +1,12 @@
 import { createClient } from '@/utils/supabase/server';
 import { redirect } from 'next/navigation';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Calendar, CheckCircle2, Circle, Clock } from 'lucide-react';
+import { HelpCircle } from 'lucide-react';
 import { getCurrentPlan } from '@/lib/llm/planAgent';
+import { Button } from '@/components/ui/button';
+import Link from 'next/link';
+import dynamic from 'next/dynamic';
+import DailyTabsClient, { DayGroup } from './DailyTabsClient';
 
 type RecoveryPlan = {
   id: string;
@@ -37,8 +41,6 @@ type RecoveryPlanReflection = {
   created_at: string | null;
 };
 
-// Client component for interactive elements
-import dynamic from 'next/dynamic';
 const PlanningActions = dynamic(() => import('./PlanningActions'), { ssr: false });
 
 export default async function PlanningPage() {
@@ -49,14 +51,27 @@ export default async function PlanningPage() {
     redirect('/login');
   }
 
-  // Get current plan
   const currentPlan: RecoveryPlan | null = await getCurrentPlan(user.id);
 
-  // Calculate progress if plan exists
-  let progress = 0;
-  if (currentPlan?.recovery_plan_tasks) {
-    const completedTasks = currentPlan.recovery_plan_tasks.filter(task => task.completed).length;
-    progress = Math.round((completedTasks / currentPlan.recovery_plan_tasks.length) * 100);
+  // Wearable data (minimal insight): last 7 days HRV
+  const { data: connection } = await supabase
+    .from('wearable_connections')
+    .select('id')
+    .eq('user_id', user.id)
+    .maybeSingle();
+  let hrvAvg: number | null = null;
+  if (connection?.id) {
+    const { data: biometricData } = await supabase
+      .from('wearable_data')
+      .select('metric_type,value,timestamp')
+      .eq('connection_id', connection.id)
+      .eq('metric_type', 'hrv')
+      .gte('timestamp', new Date(Date.now() - 7*24*60*60*1000).toISOString())
+      .order('timestamp', { ascending: false });
+    if (biometricData && biometricData.length) {
+      const vals = biometricData.map(b => b.value).filter(v => typeof v === 'number') as number[];
+      if (vals.length) hrvAvg = Math.round((vals.reduce((a,b)=>a+b,0)/vals.length) * 10) / 10;
+    }
   }
 
   const formatDate = (dateString: string) => {
@@ -68,313 +83,162 @@ export default async function PlanningPage() {
     });
   };
 
-  const getCategoryIcon = (category: string) => {
-    switch (category) {
-      case 'breathwork': return '🫁';
-      case 'movement': return '🚶';
-      case 'sleep': return '😴';
-      case 'nutrition': return '🥗';
-      case 'mindset': return '🧠';
-      default: return '✨';
-    }
-  };
-
-  const getCategoryColor = (category: string) => {
-    switch (category) {
-      case 'breathwork': return 'bg-blue-50 text-blue-700 border-blue-200';
-      case 'movement': return 'bg-green-50 text-green-700 border-green-200';
-      case 'sleep': return 'bg-purple-50 text-purple-700 border-purple-200';
-      case 'nutrition': return 'bg-orange-50 text-orange-700 border-orange-200';
-      case 'mindset': return 'bg-pink-50 text-pink-700 border-pink-200';
-      default: return 'bg-gray-50 text-gray-700 border-gray-200';
-    }
-  };
-
-  const getTimeIcon = (timeSuggestion: string | null) => {
-    switch (timeSuggestion) {
-      case 'morning': return '☀️';
-      case 'afternoon': return '🌅';
-      case 'evening': return '🌙';
-      case 'flexible': return '⏰';
-      default: return '⏰';
-    }
-  };
-
-  // Group tasks by date for multi-task daily view
+  // Group by date for tabs
   const groupTasksByDate = (tasks: RecoveryPlanTask[]) => {
     const grouped = tasks.reduce((acc, task) => {
-      if (!acc[task.date]) {
-        acc[task.date] = [];
-      }
+      if (!acc[task.date]) acc[task.date] = [];
       acc[task.date].push(task);
       return acc;
     }, {} as Record<string, RecoveryPlanTask[]>);
-    
     return Object.entries(grouped)
-      .sort(([a], [b]) => a.localeCompare(b))
-      .map(([date, tasks]) => ({
+      .sort(([a],[b]) => a.localeCompare(b))
+      .map(([date, tasks], idx) => ({
         date,
-        tasks: tasks.sort((a, b) => {
-          const at = a.scheduled_at ? new Date(a.scheduled_at).getTime() : Number.MAX_SAFE_INTEGER
-          const bt = b.scheduled_at ? new Date(b.scheduled_at).getTime() : Number.MAX_SAFE_INTEGER
-          if (at !== bt) return at - bt
-          return (a.time_suggestion || 'flexible').localeCompare(b.time_suggestion || 'flexible')
+        label: `Day ${idx+1}`,
+        tasks: tasks.sort((a,b) => {
+          const at = a.scheduled_at ? new Date(a.scheduled_at).getTime() : Number.MAX_SAFE_INTEGER;
+          const bt = b.scheduled_at ? new Date(b.scheduled_at).getTime() : Number.MAX_SAFE_INTEGER;
+          if (at !== bt) return at - bt;
+          return (a.time_suggestion || 'flexible').localeCompare(b.time_suggestion || 'flexible');
         })
-      }));
+      })) as DayGroup[];
   };
 
+  // Progress helpers
+  let progress = 0;
+  let dayGroups: DayGroup[] = [];
+  let todayIndex = 0;
+  if (currentPlan?.recovery_plan_tasks) {
+    const completedTasks = currentPlan.recovery_plan_tasks.filter(t => t.completed).length;
+    progress = Math.round((completedTasks / currentPlan.recovery_plan_tasks.length) * 100);
+    dayGroups = groupTasksByDate(currentPlan.recovery_plan_tasks);
+    const todayIso = new Date().toISOString().split('T')[0];
+    todayIndex = Math.max(0, dayGroups.findIndex(d => d.date === todayIso));
+  }
 
+  // Simple streak: consecutive days with all tasks complete up to today
+  const streak = (() => {
+    if (!dayGroups.length) return 0;
+    let s = 0;
+    for (let i = dayGroups.length - 1; i >= 0; i--) {
+      const d = dayGroups[i];
+      const done = d.tasks.length > 0 && d.tasks.every(t => !!t.completed);
+      if (done) s++; else break;
+    }
+    return s;
+  })();
+
+  // Focus adherence (example: movement + mindset combined as "focus")
+  const focusAdherence = (() => {
+    if (!currentPlan?.recovery_plan_tasks?.length) return 0;
+    const focusTasks = currentPlan.recovery_plan_tasks.filter(t => (t.category || '').match(/movement|mindset/i));
+    if (!focusTasks.length) return 0;
+    const done = focusTasks.filter(t => t.completed).length;
+    return Math.round((done / focusTasks.length) * 100);
+  })();
+
+  const rings = [
+    { label: 'Overall', value: Math.round(progress) },
+    { label: 'Streak', value: Math.round(Math.min((streak * 100) / (dayGroups.length || 1), 100)) },
+    { label: 'Focus', value: Math.round(focusAdherence) },
+  ];
 
   return (
-    <div className="min-h-screen bg-white px-4 sm:px-8 py-8">
-      <div className="max-w-6xl mx-auto space-y-8">
-        {/* Header */}
-        <div className="text-center space-y-2">
-          <h1 className="text-2xl sm:text-3xl font-logo font-bold text-neutral-900">Recovery Planning</h1>
-          <p className="text-neutral-600">Your personalized path to wellness and recovery</p>
+    <div className="w-full space-y-8">
+      {/* Page Header */}
+      <div className="flex items-start justify-between gap-4">
+        <div className="space-y-2">
+          <h1 className="text-3xl font-logo font-bold text-neutral-900">Your Recovery Plan</h1>
+          <p className="text-lg text-neutral-600 max-w-2xl">A simple space to review what&apos;s scheduled next and understand why each step matters.</p>
         </div>
+        <Link href="/how-it-works#planning" className="inline-flex items-center gap-2 text-sm text-neutral-500 hover:text-neutral-700 transition-colors">
+          <HelpCircle className="w-4 h-4" />
+          <span className="hidden sm:inline">Learn more</span>
+        </Link>
+      </div>
 
-        {/* Planning Toolbar */}
-        <Card className="border-0 shadow-lg">
-          <CardHeader className="pb-3">
-            <CardTitle className="text-lg text-neutral-900">Plan generation</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="flex items-center justify-between gap-3 flex-col sm:flex-row">
-              <div className="text-sm text-neutral-600">
-                Times are personalized to your wake/bed window and timezone.
+      {/* No Active Plan State */}
+      {!currentPlan ? (
+        <div className="space-y-8">
+          {/* Hero */}
+          <div className="grid md:grid-cols-2 gap-6 items-center">
+            <div className="order-2 md:order-1 text-center md:text-left space-y-3">
+              <h2 className="text-2xl sm:text-3xl font-logo font-bold text-neutral-900">Your Recovery Journey Starts Here</h2>
+              <p className="text-neutral-600">Choose a guided plan or pick one from our library.</p>
+              <div className="flex flex-col sm:flex-row gap-3 justify-center md:justify-start">
+                <PlanningActions isGenerateButton />
+                <Button asChild variant="outline">
+                  <Link href="/dashboard/act">Browse Plan Library</Link>
+                </Button>
               </div>
-              <div className="flex items-center gap-3">
-                <PlanningActions isGenerateButton={true} isRegenerateButton={!!currentPlan} />
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-
-        {currentPlan ? (
-          <>
-            {/* Plan Overview */}
-            <Card className="border-0 shadow-lg">
-              <CardHeader className="pb-4">
-                <div className="flex items-center justify-between">
-                  <div>
-                    <CardTitle className="text-2xl text-gray-900">{currentPlan.title}</CardTitle>
-                    {currentPlan.description && (
-                      <p className="text-gray-600 mt-2">{currentPlan.description}</p>
-                    )}
-                  </div>
-                  <div className="text-right">
-                    <div className="text-sm text-gray-500">Progress</div>
-                    <div className="text-2xl font-bold text-green-600">{progress}%</div>
-                  </div>
-                </div>
-                
-                <div className="flex items-center gap-6 text-sm text-neutral-600 mt-4">
-                  <div className="flex items-center gap-2">
-                    <Calendar className="w-4 h-4" />
-                    <span>{formatDate(currentPlan.start_date)} → {formatDate(currentPlan.end_date)}</span>
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <Clock className="w-4 h-4" />
-                    <span>{groupTasksByDate(currentPlan.recovery_plan_tasks).length} days</span>
-                  </div>
-                </div>
-
-                {/* Progress Bar */}
-                <div className="w-full bg-gray-200 rounded-full h-2 mt-4">
-                  <div 
-                    className="bg-green-600 h-2 rounded-full transition-all duration-300" 
-                    style={{ width: `${progress}%` }}
-                  ></div>
-                </div>
-              </CardHeader>
-            </Card>
-
-            {/* Daily Plans - Horizontal Scrollable Cards */}
-            <div className="space-y-6">
-              <div className="flex items-center gap-2">
-                <CheckCircle2 className="w-5 h-5 text-green-600" />
-                <h2 className="text-xl font-semibold text-neutral-900">Daily Recovery Plans</h2>
-              </div>
-              
-              <div className="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-3 gap-6">
-                {groupTasksByDate(currentPlan.recovery_plan_tasks).map((dayPlan) => {
-                  const today = new Date().toISOString().split('T')[0];
-                  const isPast = dayPlan.date < today;
-                  const isToday = dayPlan.date === today;
-                  
-                  const completedTasks = dayPlan.tasks.filter(task => task.completed).length;
-                  const totalTasks = dayPlan.tasks.length;
-                  const progressPercent = Math.round((completedTasks / totalTasks) * 100);
-                  
-                  const dayReflection = currentPlan.recovery_plan_reflections?.find(
-                    reflection => reflection.day === dayPlan.date
-                  );
-                  
-                  return (
-                    <Card 
-                      key={dayPlan.date}
-                      className={`
-                        rounded-2xl shadow-sm transition-all duration-200 hover:shadow-md
-                        ${isToday 
-                          ? 'ring-2 ring-blue-200 bg-blue-50 border-blue-200' 
-                          : completedTasks === totalTasks && totalTasks > 0
-                            ? 'bg-green-50 border-green-200'
-                            : 'bg-white border-neutral-200'
-                        }
-                      `}
-                    >
-                      <CardHeader className="pb-4">
-                        <div className="flex items-center justify-between">
-                          <div>
-                            <CardTitle className="text-lg text-neutral-900">
-                              🗓️ {formatDate(dayPlan.date).split(',')[0]}
-                            </CardTitle>
-                            <p className="text-sm text-neutral-600 mt-1">
-                              {formatDate(dayPlan.date).split(',')[1]?.trim()}
-                            </p>
-                          </div>
-                          {isToday && (
-                            <span className="px-3 py-1 bg-blue-100 text-blue-700 text-xs font-medium rounded-full">
-                              Today
-                            </span>
-                          )}
-                        </div>
-                        
-                        {/* Progress Indicator */}
-                        <div className="flex items-center gap-2 mt-3">
-                          <div className="text-sm text-neutral-600">
-                            ✅ {completedTasks} of {totalTasks} tasks complete
-                          </div>
-                          {progressPercent === 100 && totalTasks > 0 && (
-                            <span className="text-green-600">🎉</span>
-                          )}
-                        </div>
-                        
-                        <div className="w-full bg-neutral-200 rounded-full h-2 mt-2">
-                          <div 
-                            className={`h-2 rounded-full transition-all duration-300 ${
-                              progressPercent === 100 ? 'bg-green-500' : 'bg-blue-500'
-                            }`}
-                            style={{ width: `${progressPercent}%` }}
-                          ></div>
-                        </div>
-                      </CardHeader>
-                      
-                      <CardContent className="space-y-4">
-                        {/* Tasks List */}
-                        <div className="space-y-3">
-                          {dayPlan.tasks.map((task) => (
-                            <div
-                              key={task.id}
-                              className={`
-                                border rounded-xl p-3 transition-all duration-200
-                                ${task.completed 
-                                  ? 'bg-green-50 border-green-200' 
-                                  : 'bg-white border-neutral-200 hover:border-neutral-300'
-                                }
-                              `}
-                            >
-                              <div className="flex items-start gap-3">
-                                <div className="mt-0.5">
-                                  {task.completed ? (
-                                    <CheckCircle2 className="w-4 h-4 text-green-600" />
-                                  ) : (
-                                    <Circle className="w-4 h-4 text-neutral-400" />
-                                  )}
-                                </div>
-                                
-                                <div className="flex-1 space-y-2">
-                                  <div className="flex items-center gap-2 flex-wrap">
-                                    <span className={`px-2 py-1 text-xs font-medium rounded-lg border ${getCategoryColor(task.category || 'default')}`}>
-                                      {getCategoryIcon(task.category || 'default')} {task.category || 'general'}
-                                    </span>
-                                    {task.time_suggestion && (
-                                      <span className="px-2 py-1 bg-neutral-100 text-neutral-600 text-xs rounded-lg">
-                                        {task.scheduled_at
-                                          ? new Date(task.scheduled_at).toLocaleTimeString(undefined, { hour: '2-digit', minute: '2-digit' })
-                                          : `${getTimeIcon(task.time_suggestion)} ${task.time_suggestion || 'any'}`}
-                                      </span>
-                                    )}
-                                  </div>
-                                  
-                                  <div>
-                                    <h4 className="font-medium text-neutral-900 text-sm mb-1">{task.action}</h4>
-                                    <p className="text-xs text-neutral-600">{task.rationale}</p>
-                                  </div>
-                                  
-                                  {isToday && !task.completed && (
-                                    <PlanningActions taskId={task.id} />
-                                  )}
-                                </div>
-                              </div>
-                            </div>
-                          ))}
-                        </div>
-                        
-                        {/* Reflection Section */}
-                        {dayReflection && (
-                          <div className="border-t border-neutral-200 pt-4">
-                            <div className="space-y-3">
-                              <div className="flex items-center gap-2">
-                                <span className="text-sm font-medium text-neutral-700">✍️ Daily Reflection</span>
-                              </div>
-                              <p className="text-sm text-neutral-600 italic">&ldquo;{dayReflection.prompt}&rdquo;</p>
-                              
-                              {isPast || isToday ? (
-                                <PlanningActions 
-                                  reflectionId={dayReflection.id} 
-                                  currentReflection={dayReflection.reflection_text}
-                                  reflectionPrompt={dayReflection.prompt}
-                                />
-                              ) : (
-                                <p className="text-xs text-neutral-500">Available after {formatDate(dayPlan.date).split(',')[0]}</p>
-                              )}
-                            </div>
-                          </div>
-                        )}
-                      </CardContent>
-                    </Card>
-                  );
-                })}
+              <div className="mt-3 text-sm italic text-neutral-600 bg-neutral-50 border border-neutral-200 rounded-lg p-3">
+                <span className="mr-2">ℹ️</span>
+                Recovery plans help improve HRV by up to 18% within 4 weeks — based on recent studies.
               </div>
             </div>
-
-            {/* Plan Actions (secondary) */}
-            <Card className="border-0 shadow-lg">
-              <CardContent className="pt-6">
-                <div className="flex items-center justify-between">
-                  <div>
-                    <h3 className="font-medium text-gray-900">Plan Management</h3>
-                    <p className="text-sm text-gray-600 mt-1">
-                      Generate a new plan based on your latest data and preferences
-                    </p>
-                  </div>
-                  <PlanningActions isRegenerateButton={true} />
-                </div>
-              </CardContent>
-            </Card>
-          </>
-        ) : (
-          /* No Plan State */
-          <Card className="border-0 shadow-lg">
-            <CardContent className="text-center py-12">
-              <div className="space-y-4">
-                <div className="w-16 h-16 bg-green-100 rounded-full flex items-center justify-center mx-auto">
-                  <Calendar className="w-8 h-8 text-green-600" />
-                </div>
+            {/* Illustration placeholder */}
+            <div className="order-1 md:order-2 flex items-center justify-center">
+              <div className="h-40 w-40 md:h-56 md:w-56 rounded-full bg-gradient-to-br from-green-100 to-blue-100" aria-hidden />
+            </div>
+          </div>
+        </div>
+      ) : (
+        // Active Plan Present State
+        <div className="space-y-8">
+          {/* Overview */}
+          <Card className="border-neutral-200 shadow-sm">
+            <CardHeader className="pb-4">
+              <div className="flex items-start justify-between gap-6">
                 <div>
-                  <h3 className="text-xl font-semibold text-gray-900">No Recovery Plan Active</h3>
-                  <p className="text-gray-600 mt-2 max-w-md mx-auto">
-                    Create your first personalized recovery plan based on your biometric data and wellness goals.
-                  </p>
+                  <CardTitle className="text-2xl text-neutral-900">{currentPlan.title}</CardTitle>
+                  <div className="text-sm text-neutral-600 mt-1">
+                    {`${dayGroups.length}-Day Recovery Plan (${formatDate(currentPlan.start_date)} – ${formatDate(currentPlan.end_date)})`}
+                  </div>
+                  <div className="text-sm text-neutral-500">Day {Math.min(todayIndex+1, dayGroups.length)} of {dayGroups.length}</div>
                 </div>
-                <PlanningActions isGenerateButton={true} />
+                {/* Progress Rings */}
+                <div className="grid grid-cols-3 gap-4">
+                  {rings.map((r,idx)=> (
+                    <div key={idx} className="flex flex-col items-center">
+                      <svg width="64" height="64" viewBox="0 0 36 36" className="-rotate-90">
+                        <path d="M18 2a16 16 0 1 1 0 32 16 16 0 1 1 0-32" fill="none" stroke="#e5e7eb" strokeWidth="4" />
+                        <path d="M18 2a16 16 0 1 1 0 32" fill="none" stroke="#16a34a" strokeLinecap="round"
+                          strokeWidth="4" strokeDasharray={`${r.value}, 100`} />
+                      </svg>
+                      <div className="mt-1 text-sm font-medium text-neutral-900">{r.value}%</div>
+                      <div className="text-xs text-neutral-600">{r.label}</div>
+                    </div>
+                  ))}
+                </div>
               </div>
+            </CardHeader>
+          </Card>
+
+          {/* Day Navigation + Tasks Panel */}
+          <DailyTabsClient days={dayGroups} todayIndex={todayIndex} />
+
+          {/* Actions Row */}
+          <div className="flex flex-col sm:flex-row gap-3">
+            <Button variant="outline">View Full Schedule</Button>
+            <PlanningActions isRegenerateButton />
+            <Button asChild variant="outline">
+              <Link href="/dashboard/act">Browse Plan Library</Link>
+            </Button>
+          </div>
+
+          {/* Insights Strip */}
+          <Card className="bg-neutral-50 border-neutral-200">
+            <CardContent className="py-4 text-sm text-neutral-700 flex items-center gap-2">
+              <span>🌿</span>
+              {hrvAvg ? (
+                <span>Your HRV average over the last week is {hrvAvg}. Keep the momentum!</span>
+              ) : (
+                <span>Connect a wearable to see recovery insights alongside your plan.</span>
+              )}
             </CardContent>
           </Card>
-        )}
-      </div>
+        </div>
+      )}
     </div>
   );
 }

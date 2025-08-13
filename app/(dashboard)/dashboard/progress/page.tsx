@@ -2,10 +2,11 @@ import { redirect } from 'next/navigation'
 import { createClient } from '@/utils/supabase/server'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { format, subDays, startOfDay } from 'date-fns'
-import { Heart, Calendar, Smile } from 'lucide-react'
+import { Heart, Calendar, Smile, HelpCircle, TrendingUp } from 'lucide-react'
 import { DailyCheckInChart, BiometricTrendChart } from './ProgressCharts'
 import type { DailyCheckInData, BiometricData } from './ProgressCharts'
-
+import { Button } from '@/components/ui/button'
+import Link from 'next/link'
 
 
 // Helper function to get last 7 days
@@ -191,217 +192,255 @@ export default async function ProgressPage() {
     Math.round(rhrTrend.reduce((sum, d) => sum + d.rhr!, 0) / rhrTrend.length) : null
 
   return (
-    <div className="min-h-screen bg-white px-4 sm:px-8 py-8">
-      <div className="max-w-6xl mx-auto space-y-8">
-      {/* Page Header */}
-      <div>
-        <h1 className="text-2xl sm:text-3xl font-logo font-bold text-neutral-900 mb-2">
-          Progress & Analytics
-        </h1>
-        <p className="text-neutral-600">
-          Track your wellness journey over the past 7 days with mood trends and biometric insights.
-        </p>
+    <div className="w-full space-y-8">
+      {/* Page Header Row */}
+      <div className="flex items-start justify-between gap-4">
+        <div className="space-y-2">
+          <h1 className="text-3xl font-logo font-bold text-neutral-900">
+            Progress & Trends
+          </h1>
+          <p className="text-lg text-neutral-600 max-w-2xl">
+            Track your momentum and spot patterns so it&apos;s easier to keep moving forward.
+          </p>
+        </div>
+        <div className="flex items-center gap-3">
+          <Button variant="outline" size="sm" className="h-10">
+            <TrendingUp className="w-4 h-4 mr-2" />
+            View Trend Range
+          </Button>
+          <Link 
+            href="/how-it-works#progress" 
+            className="inline-flex items-center gap-2 text-sm text-neutral-500 hover:text-neutral-700 transition-colors"
+          >
+            <HelpCircle className="w-4 h-4" />
+            <span className="hidden sm:inline">Learn more</span>
+          </Link>
+        </div>
       </div>
 
-      {/* Stats Overview */}
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-        <Card className="border-neutral-200">
-          <CardContent className="p-4">
-            <div className="flex items-center gap-2">
-              <Calendar className="w-4 h-4 text-blue-600" />
-              <span className="text-2xl font-bold text-neutral-900">{completedCount}</span>
-            </div>
-            <p className="text-sm text-neutral-600 mt-1">Days Completed</p>
-          </CardContent>
-        </Card>
-        
-        <Card className="border-neutral-200">
-          <CardContent className="p-4">
-            <div className="flex items-center gap-2">
-              <span className="text-lg">🔥</span>
-              <span className="text-2xl font-bold text-neutral-900">{currentStreak}</span>
-            </div>
-            <p className="text-sm text-neutral-600 mt-1">Current Streak</p>
-            <p className="text-xs text-neutral-500 mt-1">Showing up daily builds recovery momentum</p>
-          </CardContent>
-        </Card>
+      {/* Content Container */}
+      <div className="space-y-8">
+        {/* Stats Overview */}
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+          <Card className="border-neutral-200 shadow-sm">
+            <CardContent className="p-4">
+              <div className="flex items-center gap-2">
+                <Calendar className="w-4 h-4 text-blue-600" />
+                <span className="text-2xl font-bold text-neutral-900">{completedCount}</span>
+              </div>
+              <p className="text-sm text-neutral-600 mt-1">Days Completed</p>
+            </CardContent>
+          </Card>
+          
+          <Card className="border-neutral-200 shadow-sm">
+            <CardContent className="p-4">
+              <div className="flex items-center gap-2">
+                <span className="text-lg">🔥</span>
+                <span className="text-2xl font-bold text-neutral-900">{currentStreak}</span>
+              </div>
+              <p className="text-sm text-neutral-600 mt-1">Current Streak</p>
+              <p className="text-xs text-neutral-500 mt-1">Showing up daily builds recovery momentum</p>
+            </CardContent>
+          </Card>
 
-        <Card className="border-neutral-200">
-          <CardContent className="p-4">
-            <div className="flex items-center gap-2">
-              <Heart className="w-4 h-4 text-blue-600" />
-              <span className="text-2xl font-bold text-neutral-900">
-                {latestRecoveryReadiness ? `${latestRecoveryReadiness}` : '--'}
-              </span>
-            </div>
-            <p className="text-sm text-neutral-600 mt-1" title="Based on Heart Rate Variability — a higher number suggests better nervous system recovery">
-              Recovery Readiness
-            </p>
-          </CardContent>
-        </Card>
-
-        <Card className="border-neutral-200">
-          <CardContent className="p-4">
-            <div className="flex items-center gap-2">
-              <Smile className="w-4 h-4 text-green-600" />
-              <span className="text-2xl font-bold text-neutral-900">
-                {moodCompletionData.filter(d => d.mood_emoji).length}
-              </span>
-            </div>
-            <p className="text-sm text-neutral-600 mt-1">Mood Entries</p>
-          </CardContent>
-        </Card>
-      </div>
-
-      {/* Weekly Recovery Insight */}
-      <Card className="border-green-200 bg-green-50">
-        <CardHeader>
-          <CardTitle className="text-green-800 flex items-center gap-2">
-            🌱 Your Weekly Recovery Insight
-          </CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div className="space-y-3">
-            <div className="grid grid-cols-1 md:grid-cols-4 gap-4 text-sm">
-              <div className="text-center">
-                <div className="text-2xl font-bold text-green-800">{completedCount}/7</div>
-                <div className="text-green-600">Days Completed</div>
+          <Card className="border-neutral-200 shadow-sm">
+            <CardContent className="p-4">
+              <div className="flex items-center gap-2">
+                <Heart className="w-4 h-4 text-blue-600" />
+                <span className="text-2xl font-bold text-neutral-900">
+                  {latestRecoveryReadiness ? `${latestRecoveryReadiness}` : '--'}
+                </span>
               </div>
-              <div className="text-center">
-                <div className="text-2xl font-bold text-green-800">{currentStreak}</div>
-                <div className="text-green-600">Current Streak</div>
-              </div>
-              <div className="text-center">
-                <div className="text-2xl font-bold text-green-800">
-                  {avgRecoveryReadiness ? `${avgRecoveryReadiness}` : '--'}
-                </div>
-                <div className="text-green-600">Avg Recovery</div>
-              </div>
-              <div className="text-center">
-                <div className="text-2xl font-bold text-green-800">
-                  {avgRestingPulse ? `${avgRestingPulse}` : '--'}
-                </div>
-                <div className="text-green-600">Avg Resting Pulse</div>
-              </div>
-            </div>
-            <div className="pt-3 border-t border-green-200">
-              <p className="text-green-700 text-sm leading-relaxed">
-                You completed <strong>{completedCount}/7 days</strong> this week ({completionPercentage}%).
-                {latestRecoveryReadiness && (
-                  <span> Your current recovery readiness is <strong>{latestRecoveryReadiness}</strong>, 
-                  {recoveryReadinessImproving ? ' trending upward' : ' staying steady'}.</span>
-                )}
-                {avgRestingPulse && (
-                  <span> Your resting pulse averaged <strong>{avgRestingPulse} bpm</strong> this week.</span>
-                )}
-                {' '}
-                {recoveryReadinessImproving ? (
-                  <span>Your nervous system recovery looks strong this week. Keep anchoring your sleep and breathwork habits! 🎉</span>
-                ) : latestRecoveryReadiness ? (
-                  <span>Your nervous system recovery looks steady this week. Keep anchoring your sleep and breathwork habits.</span>
-                ) : currentStreak >= 3 ? (
-                  <span>You&apos;re on a <strong>{currentStreak}-day streak</strong> — keep going! 🎉</span>
-                ) : (
-                  <span>Every step counts on your wellness journey. Tomorrow is a new opportunity to care for yourself. 💙</span>
-                )}
+              <p className="text-sm text-neutral-600 mt-1" title="Based on Heart Rate Variability — a higher number suggests better nervous system recovery">
+                Recovery Readiness
               </p>
-            </div>
-          </div>
-        </CardContent>
-      </Card>
+            </CardContent>
+          </Card>
 
-      {/* Chart Sections */}
-      <div className="space-y-10">
-        {/* Daily Check-In Progress Section */}
-        <div className="space-y-4">
-          <div>
-            <h2 className="text-xl font-semibold text-neutral-800 mb-2">Daily Check-In Progress</h2>
-            <p className="text-sm text-neutral-600">Each bar shows whether you completed your daily recovery action and submitted a mood check-in.</p>
-          </div>
-          <DailyCheckInChart data={moodCompletionData} />
+          <Card className="border-neutral-200 shadow-sm">
+            <CardContent className="p-4">
+              <div className="flex items-center gap-2">
+                <Smile className="w-4 h-4 text-green-600" />
+                <span className="text-2xl font-bold text-neutral-900">
+                  {moodCompletionData.filter(d => d.mood_emoji).length}
+                </span>
+              </div>
+              <p className="text-sm text-neutral-600 mt-1">Mood Entries</p>
+            </CardContent>
+          </Card>
         </div>
 
-        {/* Recovery Trends Section */}
-        <div className="space-y-4">
-          <div>
-            <h2 className="text-xl font-semibold text-neutral-800 mb-2">Reflect: Your Biometric Recovery Signals</h2>
-            <p className="text-sm text-neutral-600">We use wearable data to help you understand how well your body is recovering.</p>
-          </div>
-          <BiometricTrendChart data={biometricChartData} isImproving={recoveryReadinessImproving} />
-        </div>
-      </div>
-
-      {/* Weekly Summary */}
-      {(completedCount > 0 || moodCompletionData.some(d => d.mood_emoji)) && (
-        <Card className="border-green-200 bg-green-50">
+        {/* Weekly Recovery Insight */}
+        <Card className="border-green-200 bg-green-50 shadow-sm">
           <CardHeader>
-            <CardTitle className="text-green-800">🌿 Weekly Summary</CardTitle>
+            <CardTitle className="text-green-800 flex items-center gap-2">
+              🌱 Your Weekly Recovery Insight
+            </CardTitle>
           </CardHeader>
           <CardContent>
-            <p className="text-green-700">
-              This week you showed up <strong>{completedCount}/7 days</strong>.
-              {currentStreak >= 3 && (
-                <span> You&apos;re on a <strong>{currentStreak}-day streak</strong> — that kind of consistency matters!</span>
-              )}
-              {moodCompletionData.filter(d => d.mood_emoji).length > 0 && (
-                <span> You&apos;ve been tracking your mood consistently, which shows great self-awareness.</span>
-              )}
-              {recoveryReadinessImproving && (
-                <span> Your recovery trends are improving — keep anchoring your routine with the practices that feel good.</span>
-              )}
-              {completedCount >= 5 ? (
-                <span> You&apos;re building fantastic momentum! 🎉</span>
-              ) : currentStreak >= 2 ? (
-                <span> You&apos;re building good momentum. Keep going! 💪</span>
-              ) : (
-                <span> Every step counts on your wellness journey. Tomorrow is a new opportunity to care for yourself. 💙</span>
-              )}
-            </p>
-          </CardContent>
-        </Card>
-      )}
-
-      {/* Next Step CTA */}
-      {completedCount >= 2 && (
-        <Card className="border-blue-200 bg-blue-50">
-          <CardContent className="p-6 text-center">
-            <h3 className="text-lg font-medium text-blue-900 mb-2">
-              Want to keep your momentum?
-            </h3>
-            <p className="text-blue-700 text-sm mb-4">
-              Generate a fresh recovery plan based on your recent progress and biometric trends.
-            </p>
-            <form action="/api/planning" method="post">
-              <button
-                type="submit"
-                className="bg-blue-600 hover:bg-blue-700 text-white px-6 py-2 rounded-lg font-medium transition-colors"
-              >
-                Regenerate My Recovery Plan
-              </button>
-            </form>
-          </CardContent>
-        </Card>
-      )}
-
-      {/* Empty State */}
-      {completedCount === 0 && !moodCompletionData.some(d => d.mood_emoji) && !biometricChartData.some(d => d.hrv !== null || d.rhr !== null) && (
-        <Card className="border-blue-200 bg-blue-50">
-          <CardContent className="flex flex-col items-center justify-center py-12 text-center">
-            <div className="w-16 h-16 bg-gradient-to-br from-blue-100 to-green-100 rounded-full flex items-center justify-center mb-6">
-              <Heart className="w-8 h-8 text-blue-600" />
+            <div className="space-y-3">
+              <div className="grid grid-cols-1 md:grid-cols-4 gap-4 text-sm">
+                <div className="text-center">
+                  <div className="text-2xl font-bold text-green-800">{completedCount}/7</div>
+                  <div className="text-green-600">Days Completed</div>
+                </div>
+                <div className="text-center">
+                  <div className="text-2xl font-bold text-green-800">{currentStreak}</div>
+                  <div className="text-green-600">Current Streak</div>
+                </div>
+                <div className="text-center">
+                  <div className="text-2xl font-bold text-green-800">
+                    {avgRecoveryReadiness ? `${avgRecoveryReadiness}` : '--'}
+                  </div>
+                  <div className="text-green-600">Avg Recovery</div>
+                </div>
+                <div className="text-center">
+                  <div className="text-2xl font-bold text-green-800">
+                    {avgRestingPulse ? `${avgRestingPulse}` : '--'}
+                  </div>
+                  <div className="text-green-600">Avg Resting Pulse</div>
+                </div>
+              </div>
+              <div className="pt-3 border-t border-green-200">
+                <p className="text-green-700 text-sm leading-relaxed">
+                  You completed <strong>{completedCount}/7 days</strong> this week ({completionPercentage}%).
+                  {latestRecoveryReadiness && (
+                    <span> Your current recovery readiness is <strong>{latestRecoveryReadiness}</strong>, 
+                    {recoveryReadinessImproving ? ' trending upward' : ' staying steady'}.</span>
+                  )}
+                  {avgRestingPulse && (
+                    <span> Your resting pulse averaged <strong>{avgRestingPulse} bpm</strong> this week.</span>
+                  )}
+                  {' '}
+                  {recoveryReadinessImproving ? (
+                    <span>Your nervous system recovery looks strong this week. Keep anchoring your sleep and breathwork habits! 🎉</span>
+                  ) : latestRecoveryReadiness ? (
+                    <span>Your nervous system recovery looks steady this week. Keep anchoring your sleep and breathwork habits.</span>
+                  ) : currentStreak >= 3 ? (
+                    <span>You&apos;re on a <strong>{currentStreak}-day streak</strong> — keep going! 🎉</span>
+                  ) : (
+                    <span>Every step counts on your wellness journey. Tomorrow is a new opportunity to care for yourself. 💙</span>
+                  )}
+                </p>
+              </div>
             </div>
-            <h3 className="text-xl font-medium text-blue-900 mb-3">
-              No recovery data yet — make sure your wearable is synced
-            </h3>
-            <p className="text-blue-700 max-w-md mb-6">
-              Complete your daily recovery actions and connect your wearable device to see your biometric trends and progress here.
-            </p>
-            <p className="text-sm text-blue-600">
-              Come back tomorrow to see your trends! 🌱
-            </p>
           </CardContent>
         </Card>
-      )}
+
+        {/* Chart Sections */}
+        <div className="space-y-10">
+          {/* Daily Check-In Progress Section */}
+          <div className="space-y-4">
+            <div>
+              <h2 className="text-xl font-semibold text-neutral-800 mb-2">Daily Check-In Progress</h2>
+              <p className="text-sm text-neutral-600">Each bar shows whether you completed your daily recovery action and submitted a mood check-in.</p>
+            </div>
+            <DailyCheckInChart data={moodCompletionData} />
+          </div>
+
+          {/* Recovery Trends Section */}
+          <div className="space-y-4">
+            <div>
+              <h2 className="text-xl font-semibold text-neutral-800 mb-2">Reflect: Your Biometric Recovery Signals</h2>
+              <p className="text-sm text-neutral-600">We use wearable data to help you understand how well your body is recovering.</p>
+            </div>
+            <BiometricTrendChart data={biometricChartData} isImproving={recoveryReadinessImproving} />
+          </div>
+        </div>
+
+        {/* Weekly Summary */}
+        {(completedCount > 0 || moodCompletionData.some(d => d.mood_emoji)) && (
+          <Card className="border-green-200 bg-green-50 shadow-sm">
+            <CardHeader>
+              <CardTitle className="text-green-800">🌿 Weekly Summary</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <p className="text-green-700">
+                This week you showed up <strong>{completedCount}/7 days</strong>.
+                {currentStreak >= 3 && (
+                  <span> You&apos;re on a <strong>{currentStreak}-day streak</strong> — that kind of consistency matters!</span>
+                )}
+                {moodCompletionData.filter(d => d.mood_emoji).length > 0 && (
+                  <span> You&apos;ve been tracking your mood consistently, which shows great self-awareness.</span>
+                )}
+                {recoveryReadinessImproving && (
+                  <span> Your recovery trends are improving — keep anchoring your routine with the practices that feel good.</span>
+                )}
+                {completedCount >= 5 ? (
+                  <span> You&apos;re building fantastic momentum! 🎉</span>
+                ) : currentStreak >= 2 ? (
+                  <span> You&apos;re building good momentum. Keep going! 💪</span>
+                ) : (
+                  <span> Every step counts on your wellness journey. Tomorrow is a new opportunity to care for yourself. 💙</span>
+                )}
+              </p>
+            </CardContent>
+          </Card>
+        )}
+
+        {/* Next Step CTA */}
+        {completedCount >= 2 && (
+          <Card className="border-blue-200 bg-blue-50 shadow-sm">
+            <CardContent className="p-6 text-center">
+              <h3 className="text-lg font-medium text-blue-900 mb-2">
+                Want to keep your momentum?
+              </h3>
+              <p className="text-blue-700 text-sm mb-4">
+                Generate a fresh recovery plan based on your recent progress and biometric trends.
+              </p>
+              <form action="/api/planning" method="post">
+                <button
+                  type="submit"
+                  className="bg-blue-600 hover:bg-blue-700 text-white px-6 py-2 rounded-lg font-medium transition-colors"
+                >
+                  Regenerate My Recovery Plan
+                </button>
+              </form>
+            </CardContent>
+          </Card>
+        )}
+
+        {/* Empty State */}
+        {completedCount === 0 && !moodCompletionData.some(d => d.mood_emoji) && !biometricChartData.some(d => d.hrv !== null || d.rhr !== null) && (
+          <Card className="border-blue-200 bg-blue-50 shadow-sm">
+            <CardContent className="flex flex-col items-center justify-center py-12 text-center">
+              <div className="w-16 h-16 bg-gradient-to-br from-blue-100 to-green-100 rounded-full flex items-center justify-center mb-6">
+                <Heart className="w-8 h-8 text-blue-600" />
+              </div>
+              <h3 className="text-xl font-medium text-blue-900 mb-3">
+                No recovery data yet — make sure your wearable is synced
+              </h3>
+              <p className="text-blue-700 max-w-md mb-6">
+                Complete your daily recovery actions and connect your wearable device to see your biometric trends and progress here.
+              </p>
+              <p className="text-sm text-blue-600">
+                Come back tomorrow to see your trends! 🌱
+              </p>
+            </CardContent>
+          </Card>
+        )}
+
+        {/* Why am I seeing this? */}
+        <Card className="border-neutral-200 shadow-sm bg-neutral-50">
+          <CardContent className="pt-6">
+            <div className="flex items-start gap-3">
+              <HelpCircle className="w-5 h-5 text-neutral-500 mt-0.5" />
+              <div className="space-y-2">
+                <h3 className="font-medium text-neutral-900">Why am I seeing this?</h3>
+                <p className="text-sm text-neutral-600">
+                  Progress tracking helps you understand patterns in your recovery journey. 
+                  The more consistently you show up, the clearer these insights become.
+                </p>
+                <Link 
+                  href="/how-it-works#progress" 
+                  className="inline-flex items-center gap-1 text-sm text-blue-600 hover:text-blue-700 transition-colors"
+                >
+                  Learn more about progress tracking
+                </Link>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
       </div>
     </div>
   )
