@@ -172,8 +172,7 @@ export default function LandingPage() {
                       Into the body.
                     </h2>
                     <p className="text-pretty text-base sm:text-lg md:text-xl text-neutral-700 leading-relaxed">
-                      ROOTED Companion turns your signals into simple daily actions—so recovery feels doable.
-                    </p>
+                    A personalised recovery system for high performers and teams. Reduce stress and burnout with data‑driven daily actions.                    </p>
                     <div className="flex flex-col sm:flex-row gap-2 sm:gap-4 justify-center md:justify-start">
                       <button
                         type="button"
@@ -392,7 +391,7 @@ export default function LandingPage() {
                 </div>
                 <CardTitle className="text-xl font-logo">Sleep: A deep way of meditation</CardTitle>
                 <CardDescription className="text-neutral-600">
-                  Invite rest, don't force it. Lead with calmer intuition and stamina.
+                  Invite rest, don&apos;t force it. Lead with calmer intuition and stamina.
                 </CardDescription>
               </CardHeader>
               <CardContent>
