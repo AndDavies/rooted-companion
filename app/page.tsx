@@ -85,23 +85,23 @@ export default function LandingPage() {
 
         {/* Desktop nav */}
         <nav className="hidden md:flex items-center gap-6">
-          <a href="#pillars" className="text-sm text-neutral-600 hover:text-neutral-900 transition-colors">Pillars</a>
           <a href="#how-it-works" className="text-sm text-neutral-600 hover:text-neutral-900 transition-colors">How it works</a>
+          <a href="#pillars" className="text-sm text-neutral-600 hover:text-neutral-900 transition-colors">Pillars</a>
           <a href="#faq" className="text-sm text-neutral-600 hover:text-neutral-900 transition-colors">FAQ</a>
-          <div className="flex items-center gap-3">
-            <button
-              type="button"
-              onClick={() => window.dispatchEvent(new Event("open-waitlist"))}
-              className="inline-flex items-center justify-center rounded-full px-5 py-2 text-sm bg-[#e0e111] text-neutral-800 hover:bg-[#d4d50f]"
-            >
-              Join the Waitlist
-            </button>
-            <Link href="/login">
-              <Button variant="outline" size="sm" className="rounded-full px-5">
-                Log in
-              </Button>
-            </Link>
-          </div>
+                      <div className="flex items-center gap-3">
+              <button
+                type="button"
+                onClick={() => window.dispatchEvent(new Event("open-waitlist"))}
+                className="inline-flex items-center justify-center rounded-full px-5 py-2 text-sm bg-[#e0e111] text-neutral-800 hover:bg-[#d4d50f] h-10"
+              >
+                Join the Waitlist
+              </button>
+              <Link href="/login">
+                <Button variant="outline" size="sm" className="rounded-full px-5 h-10">
+                  Log in
+                </Button>
+              </Link>
+            </div>
         </nav>
 
         {/* Mobile hamburger */}
@@ -118,13 +118,13 @@ export default function LandingPage() {
         </div>
       </header>
 
-      {/* Mobile menu */}
-      {mobileOpen && (
-        <div className="md:hidden border-b border-neutral-200">
-          <nav className="px-6 py-4 flex flex-col gap-3">
-            <a href="#pillars" className="text-sm text-neutral-700 hover:text-neutral-900 transition-colors">Pillars</a>
-            <a href="#how-it-works" className="text-sm text-neutral-700 hover:text-neutral-900 transition-colors">How it works</a>
-            <a href="#faq" className="text-sm text-neutral-700 hover:text-neutral-900 transition-colors">FAQ</a>
+              {/* Mobile menu */}
+        {mobileOpen && (
+          <div className="md:hidden border-b border-neutral-200">
+            <nav className="px-6 py-4 flex flex-col gap-3">
+              <a href="#how-it-works" className="text-sm text-neutral-700 hover:text-neutral-900 transition-colors">How it works</a>
+              <a href="#pillars" className="text-sm text-neutral-700 hover:text-neutral-900 transition-colors">Pillars</a>
+              <a href="#faq" className="text-sm text-neutral-700 hover:text-neutral-900 transition-colors">FAQ</a>
             <div className="pt-2 flex items-center gap-3">
               <button
                 type="button"
@@ -134,7 +134,7 @@ export default function LandingPage() {
                 Join the Waitlist
               </button>
               <Link href="/login" className="flex-1">
-                <Button variant="outline" className="w-full rounded-full">
+                <Button variant="outline" className="w-full rounded-full h-10">
                   Log in
                 </Button>
               </Link>
@@ -178,13 +178,13 @@ export default function LandingPage() {
                       <button
                         type="button"
                         onClick={() => window.dispatchEvent(new Event("open-waitlist"))}
-                        className="inline-flex items-center justify-center rounded-full px-5 py-3 text-base sm:px-8 sm:py-4 sm:text-lg bg-[#e0e111] text-neutral-800 hover:bg-[#d4d50f] sm:min-w-[160px]"
+                        className="inline-flex items-center justify-center rounded-full px-5 py-3 text-base sm:px-8 sm:py-4 sm:text-lg bg-[#e0e111] text-neutral-800 hover:bg-[#d4d50f] sm:min-w-[160px] h-12 sm:h-14"
                       >
                         Join Waitlist
                       </button>
-                      <a href="#pillars" className="inline-flex">
-                        <Button variant="outline" size="lg" className="w-full sm:w-auto px-5 py-3 text-base sm:px-8 sm:py-4 sm:text-lg rounded-full sm:min-w-[160px]">
-                          Explore the Pillars
+                      <a href="#how-it-works" className="inline-flex">
+                        <Button variant="outline" size="lg" className="w-full sm:w-auto px-5 py-3 text-base sm:px-8 sm:py-4 sm:text-lg rounded-full sm:min-w-[160px] h-12 sm:h-14">
+                          How It Works
                         </Button>
                       </a>
                     </div>
@@ -197,117 +197,84 @@ export default function LandingPage() {
           </div>
         </section>
 
-        {/* Pillars Section */}
-        <section id="pillars" className="container-custom py-16 md:py-24 bg-neutral-50 scroll-mt-24">
-          <div className="text-center mb-16">
-            <h3 className="text-3xl md:text-4xl font-logo font-bold text-neutral-900 mb-4">The Six Pillars of the Rooted Way</h3>
-            <p className="text-lg text-neutral-600 max-w-2xl mx-auto">
-              Practices that return you to presence, power, and embodied clarity.
-            </p>
+        {/* Observe → Act → Reflect (Animated) - Moved here directly under hero */}
+        <section id="oar-flow" aria-label="Observe Act Reflect flow" className="w-full bg-white scroll-mt-24">
+          <div className="container-custom py-12 md:py-16">
+            <div className="text-center mb-6">
+              <h4 className="font-logo text-2xl md:text-3xl font-bold text-neutral-900">Observe → Act → Reflect</h4>
+              <p className="text-neutral-600">A simple loop that adapts every day.</p>
+            </div>
+
+            <div className="relative mx-auto max-w-5xl h-44 md:h-52 reveal opacity-0 translate-y-4 transition-all duration-700">
+              {/* Connector track (gradient) */}
+              <div className="oar-track absolute left-[8%] right-[8%] top-1/2 -translate-y-1/2 h-2 rounded-full" />
+
+              {/* Moving indicator dot */}
+              <div className="oar-dot absolute top-1/2 -translate-y-1/2" />
+
+              {/* Pill bubbles */}
+              <div className="absolute inset-0 flex items-center justify-between px-8 md:px-10">
+                <div className="oar-bubble bg-[#e5e900] text-neutral-900">
+                  <span className="font-medium">Observe</span>
+                </div>
+                <div className="oar-bubble bg-[#a5a5f8] text-neutral-900">
+                  <span className="font-medium">Act</span>
+                </div>
+                <div className="oar-bubble bg-[#f878cd] text-neutral-900">
+                  <span className="font-medium">Reflect</span>
+                </div>
+              </div>
+            </div>
           </div>
 
-          <div className="grid md:grid-cols-3 gap-8">
-            {/* 1. Breath */}
-            <Card className="reveal opacity-0 translate-y-4 transition-all duration-700 border-neutral-200 hover:shadow-md transition-all duration-200">
-              <CardHeader>
-                <div className="w-12 h-12 bg-blue-100 rounded-lg flex items-center justify-center mb-3">
-                  <Wind className="w-6 h-6 text-blue-700" />
-                </div>
-                <CardTitle className="text-xl font-logo">Breath: Our first teacher</CardTitle>
-                <CardDescription className="text-neutral-600">
-                  Choose rhythm over reactivity. Tune your nervous system and clear the fog between thought and body.
-                </CardDescription>
-              </CardHeader>
-              <CardContent>
-                <p className="text-sm text-neutral-700"><span className="font-medium">Weekly task:</span> Three threshold breaths at daily transitions.</p>
-              </CardContent>
-            </Card>
+          {/* Local styles for the OAR animation */}
+          <style jsx>{`
+            @media (prefers-reduced-motion: reduce) {
+              .oar-bubble { animation: none !important; }
+              .oar-dot { animation: none !important; }
+            }
+            .oar-bubble {
+              width: 112px; height: 112px; border-radius: 9999px;
+              display: flex; align-items: center; justify-content: center;
+              box-shadow: 0 10px 24px rgba(0,0,0,0.08);
+              animation: oar-bob 6s ease-in-out infinite;
+            }
+            .oar-bubble:nth-child(2) { animation-delay: .2s; }
+            .oar-bubble:nth-child(3) { animation-delay: .4s; }
 
-            {/* 2. Sleep */}
-            <Card className="reveal opacity-0 translate-y-4 transition-all duration-700 border-neutral-200 hover:shadow-md transition-all duration-200">
-              <CardHeader>
-                <div className="w-12 h-12 bg-indigo-100 rounded-lg flex items-center justify-center mb-3">
-                  <Moon className="w-6 h-6 text-indigo-700" />
-                </div>
-                <CardTitle className="text-xl font-logo">Sleep: A deep way of meditation</CardTitle>
-                <CardDescription className="text-neutral-600">
-                  Invite rest, don’t force it. Lead with calmer intuition and stamina.
-                </CardDescription>
-              </CardHeader>
-              <CardContent>
-                <p className="text-sm text-neutral-700"><span className="font-medium">Weekly task:</span> One-hour digital sunset before bed.</p>
-              </CardContent>
-            </Card>
+            .oar-track {
+              background: linear-gradient(90deg, #e5e900, #a5a5f8, #f878cd);
+            }
 
-            {/* 3. Food */}
-            <Card className="reveal opacity-0 translate-y-4 transition-all duration-700 border-neutral-200 hover:shadow-md transition-all duration-200">
-              <CardHeader>
-                <div className="w-12 h-12 bg-emerald-100 rounded-lg flex items-center justify-center mb-3">
-                  <Utensils className="w-6 h-6 text-emerald-700" />
-                </div>
-                <CardTitle className="text-xl font-logo">Food: Living information</CardTitle>
-                <CardDescription className="text-neutral-600">
-                  Eat as ritual. Listen to what supports energy and clarity.
-                </CardDescription>
-              </CardHeader>
-              <CardContent>
-                <p className="text-sm text-neutral-700"><span className="font-medium">Weekly task:</span> One distraction‑free listening meal.</p>
-              </CardContent>
-            </Card>
+            .oar-dot {
+              width: 14px; height: 14px; border-radius: 9999px;
+              background: #ffffff; /* no borders/outlines */
+              box-shadow: 0 6px 18px rgba(0,0,0,0.22);
+              left: 10%;
+              animation: oar-travel 7.5s ease-in-out infinite;
+            }
 
-            {/* 4. Movement */}
-            <Card className="reveal opacity-0 translate-y-4 transition-all duration-700 border-neutral-200 hover:shadow-md transition-all duration-200">
-              <CardHeader>
-                <div className="w-12 h-12 bg-orange-100 rounded-lg flex items-center justify-center mb-3">
-                  <Move className="w-6 h-6 text-orange-700" />
-                </div>
-                <CardTitle className="text-xl font-logo">Movement: Memory in motion</CardTitle>
-                <CardDescription className="text-neutral-600">
-                  Move to reveal, not impress. Let the body guide you.
-                </CardDescription>
-              </CardHeader>
-              <CardContent>
-                <p className="text-sm text-neutral-700"><span className="font-medium">Weekly task:</span> 10‑minute silent flow, daily.</p>
-              </CardContent>
-            </Card>
+            @keyframes oar-bob {
+              0%, 100% { transform: translateY(0); }
+              50% { transform: translateY(-6px); }
+            }
 
-            {/* 5. Focus */}
-            <Card className="reveal opacity-0 translate-y-4 transition-all duration-700 border-neutral-200 hover:shadow-md transition-all duration-200">
-              <CardHeader>
-                <div className="w-12 h-12 bg-purple-100 rounded-lg flex items-center justify-center mb-3">
-                  <Target className="w-6 h-6 text-purple-700" />
-                </div>
-                <CardTitle className="text-xl font-logo">Focus: Mind as garden</CardTitle>
-                <CardDescription className="text-neutral-600">
-                  Choose where your awareness lives, moment by moment.
-                </CardDescription>
-              </CardHeader>
-              <CardContent>
-                <p className="text-sm text-neutral-700"><span className="font-medium">Weekly task:</span> Do one thing fully, each day.</p>
-              </CardContent>
-            </Card>
+            /* Move the dot across the track and loop */
+            @keyframes oar-travel {
+              0%   { left: 10%; }
+              33%  { left: 50%; }
+              66%  { left: 90%; }
+              100% { left: 10%; }
+            }
 
-            {/* 6. Joy */}
-            <Card className="reveal opacity-0 translate-y-4 transition-all duration-700 border-neutral-200 hover:shadow-md transition-all duration-200">
-              <CardHeader>
-                <div className="w-12 h-12 bg-amber-100 rounded-lg flex items-center justify-center mb-3">
-                  <Sparkles className="w-6 h-6 text-amber-700" />
-                </div>
-                <CardTitle className="text-xl font-logo">Joy: The forgotten fuel</CardTitle>
-                <CardDescription className="text-neutral-600">
-                  Not performance or chasing—just permission to feel good again.
-                </CardDescription>
-              </CardHeader>
-              <CardContent>
-                <p className="text-sm text-neutral-700"><span className="font-medium">Weekly task:</span> Find one spark of joy, daily.</p>
-              </CardContent>
-            </Card>
-          </div>
-
-
+            @media (min-width: 768px) {
+              .oar-bubble { width: 132px; height: 132px; }
+              .oar-dot { width: 16px; height: 16px; }
+            }
+          `}</style>
         </section>
 
-        {/* How it works */}
+        {/* How it works - Moved here second */}
         <section id="how-it-works" className="container-custom py-16 md:py-24 scroll-mt-24">
           <div className="text-center mb-16">
             <h3 className="text-3xl md:text-4xl font-logo font-bold text-neutral-900 mb-4">How ROOTED Companion works</h3>
@@ -389,85 +356,114 @@ export default function LandingPage() {
               </CardHeader>
             </Card>
           </div>
-
-
         </section>
 
-        {/* Observe → Act → Reflect (Animated) */}
-        <section id="oar-flow" aria-label="Observe Act Reflect flow" className="w-full bg-white scroll-mt-24">
-          <div className="container-custom py-12 md:py-16">
-            <div className="text-center mb-6">
-              <h4 className="font-logo text-2xl md:text-3xl font-bold text-neutral-900">Observe → Act → Reflect</h4>
-              <p className="text-neutral-600">A simple loop that adapts every day.</p>
-            </div>
-
-            <div className="relative mx-auto max-w-5xl h-44 md:h-52 reveal opacity-0 translate-y-4 transition-all duration-700">
-              {/* Connector track (gradient) */}
-              <div className="oar-track absolute left-[8%] right-[8%] top-1/2 -translate-y-1/2 h-2 rounded-full" />
-
-              {/* Moving indicator dot */}
-              <div className="oar-dot absolute top-1/2 -translate-y-1/2" />
-
-              {/* Pill bubbles */}
-              <div className="absolute inset-0 flex items-center justify-between px-8 md:px-10">
-                <div className="oar-bubble bg-[#e5e900] text-neutral-900">
-                  <span className="font-medium">Observe</span>
-                </div>
-                <div className="oar-bubble bg-[#a5a5f8] text-neutral-900">
-                  <span className="font-medium">Act</span>
-                </div>
-                <div className="oar-bubble bg-[#f878cd] text-neutral-900">
-                  <span className="font-medium">Reflect</span>
-                </div>
-              </div>
-            </div>
+        {/* Pillars Section - Moved here third */}
+        <section id="pillars" className="container-custom py-16 md:py-24 bg-neutral-50 scroll-mt-24">
+          <div className="text-center mb-16">
+            <h3 className="text-3xl md:text-4xl font-logo font-bold text-neutral-900 mb-4">The Six Pillars of the Rooted Way</h3>
+            <p className="text-lg text-neutral-600 max-w-2xl mx-auto">
+              Practices that return you to presence, power, and embodied clarity.
+            </p>
           </div>
 
-          {/* Local styles for the OAR animation */}
-          <style jsx>{`
-            @media (prefers-reduced-motion: reduce) {
-              .oar-bubble { animation: none !important; }
-              .oar-dot { animation: none !important; }
-            }
-            .oar-bubble {
-              width: 112px; height: 112px; border-radius: 9999px;
-              display: flex; align-items: center; justify-content: center;
-              box-shadow: 0 10px 24px rgba(0,0,0,0.08);
-              animation: oar-bob 6s ease-in-out infinite;
-            }
-            .oar-bubble:nth-child(2) { animation-delay: .2s; }
-            .oar-bubble:nth-child(3) { animation-delay: .4s; }
+          <div className="grid md:grid-cols-3 gap-8">
+            {/* 1. Breath */}
+            <Card className="reveal opacity-0 translate-y-4 transition-all duration-700 border-neutral-200 hover:shadow-md transition-all duration-200">
+              <CardHeader>
+                <div className="w-12 h-12 bg-blue-100 rounded-lg flex items-center justify-center mb-3">
+                  <Wind className="w-6 h-6 text-blue-700" />
+                </div>
+                <CardTitle className="text-xl font-logo">Breath: Our first teacher</CardTitle>
+                <CardDescription className="text-neutral-600">
+                  Choose rhythm over reactivity. Tune your nervous system and clear the fog between thought and body.
+                </CardDescription>
+              </CardHeader>
+              <CardContent>
+                <p className="text-sm text-neutral-700"><span className="font-medium">Weekly task:</span> Three threshold breaths at daily transitions.</p>
+              </CardContent>
+            </Card>
 
-            .oar-track {
-              background: linear-gradient(90deg, #e5e900, #a5a5f8, #f878cd);
-            }
+            {/* 2. Sleep */}
+            <Card className="reveal opacity-0 translate-y-4 transition-all duration-700 border-neutral-200 hover:shadow-md transition-all duration-200">
+              <CardHeader>
+                <div className="w-12 h-12 bg-indigo-100 rounded-lg flex items-center justify-center mb-3">
+                  <Moon className="w-6 h-6 text-indigo-700" />
+                </div>
+                <CardTitle className="text-xl font-logo">Sleep: A deep way of meditation</CardTitle>
+                <CardDescription className="text-neutral-600">
+                  Invite rest, don't force it. Lead with calmer intuition and stamina.
+                </CardDescription>
+              </CardHeader>
+              <CardContent>
+                <p className="text-sm text-neutral-700"><span className="font-medium">Weekly task:</span> One-hour digital sunset before bed.</p>
+              </CardContent>
+            </Card>
 
-            .oar-dot {
-              width: 14px; height: 14px; border-radius: 9999px;
-              background: #ffffff; /* no borders/outlines */
-              box-shadow: 0 6px 18px rgba(0,0,0,0.22);
-              left: 10%;
-              animation: oar-travel 7.5s ease-in-out infinite;
-            }
+            {/* 3. Food */}
+            <Card className="reveal opacity-0 translate-y-4 transition-all duration-700 border-neutral-200 hover:shadow-md transition-all duration-200">
+              <CardHeader>
+                <div className="w-12 h-12 bg-emerald-100 rounded-lg flex items-center justify-center mb-3">
+                  <Utensils className="w-6 h-6 text-emerald-700" />
+                </div>
+                <CardTitle className="text-xl font-logo">Food: Living information</CardTitle>
+                <CardDescription className="text-neutral-600">
+                  Eat as ritual. Listen to what supports energy and clarity.
+                </CardDescription>
+              </CardHeader>
+              <CardContent>
+                <p className="text-sm text-neutral-700"><span className="font-medium">Weekly task:</span> One distraction‑free listening meal.</p>
+              </CardContent>
+            </Card>
 
-            @keyframes oar-bob {
-              0%, 100% { transform: translateY(0); }
-              50% { transform: translateY(-6px); }
-            }
+            {/* 4. Movement */}
+            <Card className="reveal opacity-0 translate-y-4 transition-all duration-700 border-neutral-200 hover:shadow-md transition-all duration-200">
+              <CardHeader>
+                <div className="w-12 h-12 bg-orange-100 rounded-lg flex items-center justify-center mb-3">
+                  <Move className="w-6 h-6 text-orange-700" />
+                </div>
+                <CardTitle className="text-xl font-logo">Movement: Memory in motion</CardTitle>
+                <CardDescription className="text-neutral-600">
+                  Move to reveal, not impress. Let the body guide you.
+                </CardDescription>
+              </CardHeader>
+              <CardContent>
+                <p className="text-sm text-neutral-700"><span className="font-medium">Weekly task:</span> 10‑minute silent flow, daily.</p>
+              </CardContent>
+            </Card>
 
-            /* Move the dot across the track and loop */
-            @keyframes oar-travel {
-              0%   { left: 10%; }
-              33%  { left: 50%; }
-              66%  { left: 90%; }
-              100% { left: 10%; }
-            }
+            {/* 5. Focus */}
+            <Card className="reveal opacity-0 translate-y-4 transition-all duration-700 border-neutral-200 hover:shadow-md transition-all duration-200">
+              <CardHeader>
+                <div className="w-12 h-12 bg-purple-100 rounded-lg flex items-center justify-center mb-3">
+                  <Target className="w-6 h-6 text-purple-700" />
+                </div>
+                <CardTitle className="text-xl font-logo">Focus: Mind as garden</CardTitle>
+                <CardDescription className="text-neutral-600">
+                  Choose where your awareness lives, moment by moment.
+                </CardDescription>
+              </CardHeader>
+              <CardContent>
+                <p className="text-sm text-neutral-700"><span className="font-medium">Weekly task:</span> Do one thing fully, each day.</p>
+              </CardContent>
+            </Card>
 
-            @media (min-width: 768px) {
-              .oar-bubble { width: 132px; height: 132px; }
-              .oar-dot { width: 16px; height: 16px; }
-            }
-          `}</style>
+            {/* 6. Joy */}
+            <Card className="reveal opacity-0 translate-y-4 transition-all duration-700 border-neutral-200 hover:shadow-md transition-all duration-200">
+              <CardHeader>
+                <div className="w-12 h-12 bg-amber-100 rounded-lg flex items-center justify-center mb-3">
+                  <Sparkles className="w-6 h-6 text-amber-700" />
+                </div>
+                <CardTitle className="text-xl font-logo">Joy: The forgotten fuel</CardTitle>
+                <CardDescription className="text-neutral-600">
+                  Not performance or chasing—just permission to feel good again.
+                </CardDescription>
+              </CardHeader>
+              <CardContent>
+                <p className="text-sm text-neutral-700"><span className="font-medium">Weekly task:</span> Find one spark of joy, daily.</p>
+              </CardContent>
+            </Card>
+          </div>
         </section>
 
         {/* Outcomes / Stats (full-bleed, no margins) */}
@@ -629,12 +625,12 @@ export default function LandingPage() {
             </p>
             <div className="flex flex-col sm:flex-row gap-4 justify-center">
               <Link href="/signup">
-                <Button size="lg" className="px-8 py-3 text-base rounded-full bg-[#e0e111] text-neutral-700 hover:bg-[#d4d50f]">
+                <Button size="lg" className="px-8 py-3 text-base rounded-full bg-[#e0e111] text-neutral-700 hover:bg-[#d4d50f] h-14">
                   Start Free
                 </Button>
               </Link>
               <a href="#how-it-works">
-                <Button variant="outline" size="lg" className="px-8 py-3 text-base rounded-full">
+                <Button variant="outline" size="lg" className="px-8 py-3 text-base rounded-full h-14">
                   See How it Works
                 </Button>
               </a>
