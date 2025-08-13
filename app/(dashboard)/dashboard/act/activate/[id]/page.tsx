@@ -109,7 +109,7 @@ export default async function ActivateTemplatePage({ searchParams, params }: { s
   }
 
   // Personalization context
-  const { data: circ } = await supabase
+  const { data: circTimesRaw } = await supabase
     .from('user_circadian_profiles')
     .select('wake_time,bedtime')
     .eq('user_id', user.id)
@@ -121,21 +121,14 @@ export default async function ActivateTemplatePage({ searchParams, params }: { s
     .maybeSingle()
 
   const startDate = computeStartDate(searchParams?.start ?? null)
-  const daysRaw = (tpl.days ?? []) as unknown
-  type RawItem = { task_ref?: unknown; slot_hint?: unknown; default_duration?: unknown }
-  type RawDay = { day?: unknown; items?: unknown }
-  const days: { day?: number; items?: { task_ref?: string; slot_hint?: string; default_duration?: number }[] }[] = Array.isArray(daysRaw)
-    ? (daysRaw as RawDay[]).map((d) => {
-        const dayNum = typeof d?.day === 'number' ? d.day : Number(d?.day) || 1
-        const rawItems = Array.isArray(d?.items) ? (d.items as RawItem[]) : []
-        const items = rawItems.map((it) => ({
-          task_ref: typeof it?.task_ref === 'string' ? it.task_ref : undefined,
-          slot_hint: typeof it?.slot_hint === 'string' ? it.slot_hint : undefined,
-          default_duration: typeof it?.default_duration === 'number' ? it.default_duration : undefined,
-        }))
-        return { day: dayNum, items }
-      })
-    : []
+  const rawDays = (tpl.days ?? []) as unknown
+  // derive wake/bed immediately to use and avoid lint warning
+  const wakeTime: string | null = (circTimesRaw as { wake_time?: string | null } | null)?.wake_time ?? null
+  const bedtime: string | null = (circTimesRaw as { bedtime?: string | null } | null)?.bedtime ?? null
+
+  type RawTask = { slug?: string; title?: string; pillar?: string; description?: string | null; duration_min?: number | null; duration_max?: number | null; zeitgeber_tags?: string[] | null; default_circadian_slot?: string | null }
+  type RawDay = { day?: number; tasks?: RawTask[] }
+  const days: RawDay[] = Array.isArray(rawDays) ? (rawDays as RawDay[]) : []
   const sortedDays = [...days].sort((a,b) => (a.day ?? 0) - (b.day ?? 0))
   const lengthDays = sortedDays.length
   const endDate = (() => {
@@ -152,6 +145,7 @@ export default async function ActivateTemplatePage({ searchParams, params }: { s
   const existingIds = (existingPlans ?? []).map((p: { id: string }) => p.id)
   if (existingIds.length) {
     await supabase.from('recovery_plan_tasks').delete().in('plan_id', existingIds)
+    await supabase.from('recovery_plan_reflections').delete().in('plan_id', existingIds)
     await supabase.from('recovery_plans').delete().in('id', existingIds)
   }
 
@@ -176,42 +170,42 @@ export default async function ActivateTemplatePage({ searchParams, params }: { s
     redirect(`/dashboard/act/${tpl.id}?error=plan_create`)
   }
 
-  // Instantiate tasks
-  type Circ = { wake_time?: string | null; bedtime?: string | null }
-  const wakeTime: string | null = (circ as Circ | null)?.wake_time ?? null
-  const bedtime: string | null = (circ as Circ | null)?.bedtime ?? null
-
+  // Instantiate tasks using tasks array per day
   for (const d of sortedDays) {
     const dayNum = d.day ?? 1
     const base = new Date(`${startDate}T00:00:00.000Z`)
     base.setUTCDate(base.getUTCDate() + (dayNum - 1))
     const ymd = base.toISOString().slice(0,10)
-    for (const it of (d.items ?? [])) {
-      const ref = it.task_ref ?? ''
+
+    for (const it of (d.tasks ?? [])) {
+      const ref = it.slug ?? ''
+      // Best-effort enrich from task_library if present; otherwise use inline data
       const { data: taskDef } = await supabase
         .from('task_library')
         .select('slug,title,description,duration_min,duration_max,pillar,intensity_tags,zeitgeber_tags,default_circadian_slots')
         .eq('slug', ref)
         .maybeSingle()
 
-      const title = taskDef?.title ?? ref
-      const duration = typeof it.default_duration === 'number' ? it.default_duration : (taskDef?.duration_min ?? 15)
-      const slot = it.slot_hint ?? (taskDef?.default_circadian_slots?.[0] ?? null)
+      const title = it.title ?? taskDef?.title ?? ref
+      const duration = (it.duration_min ?? it.duration_max) ?? taskDef?.duration_min ?? null
+      const slot = it.default_circadian_slot ?? (taskDef?.default_circadian_slots?.[0] ?? null)
       const scheduled_at = buildScheduledAt(ymd, slot ?? null, wakeTime, bedtime)
       const time_suggestion = pickTimeSuggestion(slot ?? null)
-      const category = await mapPillarToCategory((taskDef as { pillar?: string | null } | null)?.pillar ?? null)
+      const pillar = (it.pillar ?? (taskDef as { pillar?: string | null } | null)?.pillar ?? null)
+      const category = await mapPillarToCategory(pillar)
+      const rationale = it.description ?? taskDef?.description ?? null
 
       await supabase.from('recovery_plan_tasks').insert({
         plan_id: planRow.id,
         user_id: user.id,
         date: ymd,
         action: title,
-        rationale: (taskDef?.description ?? null),
+        rationale,
         category,
         time_suggestion,
         recipe_id: null,
         scheduled_at,
-        task_payload: taskDef ?? { ref },
+        task_payload: { template_ref: ref, inline: it, lib: taskDef ?? null },
         evidence_ids: null,
         duration_minutes: duration,
         slot_hint: slot ?? null,

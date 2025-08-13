@@ -92,9 +92,9 @@ export default async function PlanningPage() {
     }, {} as Record<string, RecoveryPlanTask[]>);
     return Object.entries(grouped)
       .sort(([a],[b]) => a.localeCompare(b))
-      .map(([date, tasks], idx) => ({
+      .map(([date, tasks]) => ({
         date,
-        label: `Day ${idx+1}`,
+        label: new Date(date).toLocaleDateString('en-US', { weekday: 'short', day: '2-digit' }),
         tasks: tasks.sort((a,b) => {
           const at = a.scheduled_at ? new Date(a.scheduled_at).getTime() : Number.MAX_SAFE_INTEGER;
           const bt = b.scheduled_at ? new Date(b.scheduled_at).getTime() : Number.MAX_SAFE_INTEGER;
@@ -112,8 +112,9 @@ export default async function PlanningPage() {
     const completedTasks = currentPlan.recovery_plan_tasks.filter(t => t.completed).length;
     progress = Math.round((completedTasks / currentPlan.recovery_plan_tasks.length) * 100);
     dayGroups = groupTasksByDate(currentPlan.recovery_plan_tasks);
-    const todayIso = new Date().toISOString().split('T')[0];
-    todayIndex = Math.max(0, dayGroups.findIndex(d => d.date === todayIso));
+    const todayIso = new Date().toISOString().slice(0,10);
+    const idx = dayGroups.findIndex(d => d.date === todayIso);
+    todayIndex = idx; // -1 if not found
   }
 
   // Simple streak: consecutive days with all tasks complete up to today

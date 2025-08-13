@@ -18,7 +18,7 @@ export type RecoveryPlanTask = {
 
 export type DayGroup = {
   date: string;
-  label: string; // e.g., "Day 1"
+  label: string; // e.g., "Mon 10"
   tasks: RecoveryPlanTask[];
 };
 
@@ -75,20 +75,25 @@ export default function DailyTabsClient({
   todayIndex,
 }: {
   days: DayGroup[];
-  todayIndex: number;
+  todayIndex: number; // -1 means there is no today in this plan
 }) {
-  const [active, setActive] = React.useState(Math.max(0, todayIndex));
+  const [active, setActive] = React.useState(0);
+  React.useEffect(() => {
+    setActive(0);
+  }, [days]);
 
   const activeDay = days[active];
   const completedTasks = activeDay?.tasks.filter((t) => t.completed).length ?? 0;
   const totalTasks = activeDay?.tasks.length ?? 0;
+
+  const hasToday = todayIndex >= 0 && todayIndex < days.length;
 
   return (
     <div className="space-y-6">
       {/* Tabs */}
       <div className="flex items-center gap-2 overflow-x-auto no-scrollbar">
         {days.map((d, idx) => {
-          const isToday = idx === todayIndex;
+          const isToday = hasToday && idx === todayIndex;
           const isActive = idx === active;
           return (
             <button
@@ -113,7 +118,7 @@ export default function DailyTabsClient({
       <div className="flex items-center justify-between">
         <div>
           <h2 className="text-xl font-semibold text-neutral-900">
-            {active === todayIndex ? "Today’s Activities" : `${activeDay?.label} Activities`}
+            {hasToday && active === todayIndex ? "Today’s Activities" : `${activeDay?.label} Activities`}
           </h2>
           <p className="text-sm text-neutral-600">
             {completedTasks} of {totalTasks} complete
@@ -172,7 +177,7 @@ export default function DailyTabsClient({
                 </div>
 
                 {/* Only allow marking complete on Today */}
-                {!task.completed && active === todayIndex && <PlanningActions taskId={task.id} />}
+                {!task.completed && hasToday && active === todayIndex && <PlanningActions taskId={task.id} />}
               </div>
             </div>
           </div>

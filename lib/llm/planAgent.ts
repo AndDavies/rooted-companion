@@ -603,6 +603,18 @@ async function savePlanToDatabase(
     const startDate = planData.days[0]?.date;
     const endDate = planData.days[planData.days.length - 1]?.date;
 
+    // Enforce single active plan: remove existing plans and tasks for this user
+    const { data: existingPlans } = await supabaseAdmin
+      .from('recovery_plans')
+      .select('id')
+      .eq('user_id', userId)
+    const existingIds = (existingPlans ?? []).map((p: { id: string }) => p.id)
+    if (existingIds.length) {
+      await supabaseAdmin.from('recovery_plan_tasks').delete().in('plan_id', existingIds)
+      await supabaseAdmin.from('recovery_plan_reflections').delete().in('plan_id', existingIds)
+      await supabaseAdmin.from('recovery_plans').delete().in('id', existingIds)
+    }
+
     // Insert recovery plan
     const { data: planResult, error: planError } = await supabaseAdmin
       .from('recovery_plans')
@@ -618,6 +630,7 @@ async function savePlanToDatabase(
           used_llm_scheduler: meta?.used_llm_scheduler ?? true,
           agent_version: meta?.agent_version ?? 'phase4',
           params: { length_days: meta?.planLength ?? planData.days.length },
+          source: 'agent'
         }
       })
       .select('id')

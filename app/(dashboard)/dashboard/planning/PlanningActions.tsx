@@ -175,24 +175,31 @@ export default function PlanningActions({
 
   if (isRegenerateButton) {
     return (
-      <Button 
-        onClick={handleGeneratePlan}
-        disabled={isLoading}
-        variant="outline"
-        className="border-green-600 text-green-600 hover:bg-green-50"
-      >
-        {isLoading ? (
-          <>
-            <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-            Generating...
-          </>
-        ) : (
-          <>
-            <RefreshCw className="w-4 h-4 mr-2" />
-            Regenerate Plan
-          </>
-        )}
-      </Button>
+      <div className="flex items-center gap-3">
+        <Select aria-labelledby="length-label" disabled={isLoading} value={planLength} onChange={(e) => setPlanLength(Number(e.target.value) as 3|5|7)} label="Plan length">
+          <option value={3}>3 days</option>
+          <option value={5}>5 days</option>
+          <option value={7}>7 days</option>
+        </Select>
+        <Button 
+          onClick={handleGeneratePlan}
+          disabled={isLoading}
+          variant="outline"
+          className="border-green-600 text-green-600 hover:bg-green-50"
+        >
+          {isLoading ? (
+            <>
+              <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+              Generating...
+            </>
+          ) : (
+            <>
+              <RefreshCw className="w-4 h-4 mr-2" />
+              Regenerate Plan
+            </>
+          )}
+        </Button>
+      </div>
     );
   }
 
