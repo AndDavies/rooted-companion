@@ -1,11 +1,12 @@
 import { redirect } from 'next/navigation'
 import { createSupabaseServerClient } from '@/lib/supabase/server'
-import { isUserAdmin } from '@/lib/auth/admin'
 
 export default async function AdminContentPage() {
   const supabase = await createSupabaseServerClient()
   const { data: { user } } = await supabase.auth.getUser()
-  if (!user || !isUserAdmin(user)) redirect('/')
+  if (!user) redirect('/')
+  const { data: isAdmin } = await supabase.rpc('is_admin')
+  if (!isAdmin) redirect('/')
 
   const [{ count: tasksCount }, { count: programsCount }] = await Promise.all([
     supabase.from('v_task_library_min').select('id', { count: 'exact', head: true }),

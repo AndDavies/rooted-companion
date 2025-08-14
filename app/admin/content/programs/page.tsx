@@ -1,13 +1,14 @@
 import { redirect } from 'next/navigation'
 import { createSupabaseServerClient } from '@/lib/supabase/server'
-import { isUserAdmin } from '@/lib/auth/admin'
 import { ToastProvider } from '@/components/ui/useToast'
 import ProgramsClient from './ProgramsClient'
 
 export default async function ProgramsPage() {
   const supabase = await createSupabaseServerClient()
   const { data: { user } } = await supabase.auth.getUser()
-  if (!user || !isUserAdmin(user)) redirect('/')
+  if (!user) redirect('/')
+  const { data: isAdmin } = await supabase.rpc('is_admin')
+  if (!isAdmin) redirect('/')
 
   const { data, error } = await supabase
     .from('program_templates')

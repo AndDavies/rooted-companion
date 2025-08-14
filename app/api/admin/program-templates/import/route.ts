@@ -1,7 +1,6 @@
 import { NextResponse } from 'next/server'
 import { z } from 'zod'
 import { createSupabaseServerClient } from '@/lib/supabase/server'
-import { isUserAdmin } from '@/lib/auth/admin'
 
 const ProgramTemplate = z.object({
   name: z.string().min(3),
@@ -24,7 +23,11 @@ const ImportProgramTemplatesSchema = z.array(ProgramTemplate).min(1)
 export async function POST(req: Request) {
   const supabase = await createSupabaseServerClient()
   const { data: { user } } = await supabase.auth.getUser()
-  if (!user || !isUserAdmin(user)) {
+  if (!user) {
+    return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
+  }
+  const { data: isAdmin } = await supabase.rpc('is_admin')
+  if (!isAdmin) {
     return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
   }
 

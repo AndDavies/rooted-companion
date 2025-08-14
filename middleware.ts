@@ -1,7 +1,6 @@
 import { NextResponse } from 'next/server'
 import type { NextRequest } from 'next/server'
 import { createClient } from '@/utils/supabase/server'
-import { isUserAdmin } from '@/lib/auth/admin'
 
 export async function middleware(request: NextRequest) {
   try {
@@ -44,7 +43,8 @@ export async function middleware(request: NextRequest) {
       if (!user || error) {
         return NextResponse.redirect(new URL('/login', request.url))
       }
-      if (!isUserAdmin(user)) {
+      const { data: isAdmin, error: adminCheckError } = await supabase.rpc('is_admin')
+      if (adminCheckError || !isAdmin) {
         return NextResponse.redirect(new URL('/', request.url))
       }
     }
