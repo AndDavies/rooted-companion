@@ -1,4 +1,6 @@
 import { createClient } from '@/utils/supabase/server';
+import type { Json } from '@/types/supabase';
+import { parseTaskContent } from '@/lib/tasks/contentSchema';
 import { redirect } from 'next/navigation';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { HelpCircle } from 'lucide-react';
@@ -22,13 +24,16 @@ type RecoveryPlan = {
 type RecoveryPlanTask = {
   id: string;
   date: string;
-  action: string;
+  title: string;
   rationale: string | null;
   category: string | null;
+  pillar?: string | null;
+  slug?: string | null;
   time_suggestion: string | null;
   scheduled_at?: string | null;
   recipe_id: string | null;
   completed: boolean | null;
+  task_payload?: ({ content?: unknown } | null) | Json;
 };
 
 type RecoveryPlanReflection = {
@@ -52,6 +57,17 @@ export default async function PlanningPage() {
   }
 
   const currentPlan: RecoveryPlan | null = await getCurrentPlan(user.id);
+  // Normalize any null content into {}
+  if (currentPlan?.recovery_plan_tasks) {
+    currentPlan.recovery_plan_tasks = currentPlan.recovery_plan_tasks.map(t => {
+      // payload can be the normalized shape we saved during activation
+      const p = (t.task_payload as Record<string, unknown> | null) ?? null
+      const normalized = p && typeof p === 'object' ? p : {}
+      const contentRaw = (normalized['content'] as unknown) ?? null
+      const content = parseTaskContent(contentRaw) || {}
+      return { ...t, task_payload: { ...normalized, content } as unknown as Json }
+    }) as RecoveryPlanTask[]
+  }
 
   // Wearable data (minimal insight): last 7 days HRV
   const { data: connection } = await supabase

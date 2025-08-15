@@ -9,7 +9,7 @@ import Link from 'next/link';
 type TodaysTask = {
   id: string;
   date: string;
-  action: string;
+  title: string;
   rationale: string;
   category: string;
   time_suggestion: string | null;
@@ -31,7 +31,7 @@ type CurrentPlan = {
 
 export default function RecoveryPlanWidget() {
   const [todaysTask, setTodaysTask] = useState<TodaysTask>(null);
-  const [todaysTasks, setTodaysTasks] = useState<Array<{ id?: string; completed?: boolean; category?: string; action?: string; rationale?: string; date?: string; scheduled_for?: string; scheduled_at?: string }>>([]);
+  const [todaysTasks, setTodaysTasks] = useState<Array<{ id?: string; completed?: boolean; category?: string; title?: string; rationale?: string; date?: string; scheduled_for?: string; scheduled_at?: string }>>([]);
   const [currentPlan, setCurrentPlan] = useState<CurrentPlan>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [isMarkingComplete, setIsMarkingComplete] = useState(false);
@@ -50,7 +50,7 @@ export default function RecoveryPlanWidget() {
 
         // Derive all tasks for today from currentPlan if present
         if (data.currentPlan?.recovery_plan_tasks) {
-          const allTasks = data.currentPlan.recovery_plan_tasks as Array<{ id?: string; completed?: boolean; category?: string; action?: string; rationale?: string; date?: string; scheduled_for?: string; scheduled_at?: string }>;
+          const allTasks = data.currentPlan.recovery_plan_tasks as Array<{ id?: string; completed?: boolean; category?: string; title?: string; rationale?: string; date?: string; scheduled_for?: string; scheduled_at?: string }>;
           // naive filter: tasks where completed === false or scheduled for today if date provided
           // If API provides date per task, prefer filtering by today's date; fallback to incomplete tasks
           const todayISO = new Date().toISOString().slice(0, 10)
@@ -206,7 +206,7 @@ export default function RecoveryPlanWidget() {
                         <span className="text-sm font-medium text-gray-900 capitalize">{task.category || ''}</span>
                       </div>
                       <div>
-                        <h4 className="font-medium text-gray-900 mb-1">{task.action}</h4>
+                        <h4 className="font-medium text-gray-900 mb-1">{task.title}</h4>
                         <p className="text-sm text-gray-600">{task.rationale}</p>
                       </div>
                       {!task.completed && task.id === todaysTask?.id && (

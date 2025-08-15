@@ -5,6 +5,8 @@ import { z } from "zod";
 import { zodPlanPayload } from "@/lib/llm/schemas/planTool";
 import { supabaseAdmin } from "@/utils/supabase/admin";
 import { mapTasksToTimes } from '@/lib/circadian/scheduler'
+import { parseTaskContent } from '@/lib/tasks/contentSchema'
+import type { Json } from '@/types/supabase'
 
 // Types
 export type PlanPayload = {
@@ -648,16 +650,21 @@ async function savePlanToDatabase(
         plan_id: planId,
         user_id: userId,
         date: day.date,
-        action: task.title,
+        title: task.title,
         rationale: task.rationale,
         category: task.type,
+        pillar: (task as unknown as { pillar?: string | null }).pillar ?? null,
+        slug: (task as unknown as { slug?: string | null }).slug ?? null,
         time_suggestion: task.time_suggestion || null,
         recipe_id: task.recipe_id || null,
         scheduled_at: (task as unknown as { scheduled_at?: string }).scheduled_at || null,
         duration_minutes: (task as unknown as { duration_minutes?: number }).duration_minutes ?? null,
         slot_hint: (task as unknown as { slot_hint?: string }).slot_hint ?? null,
         evidence_ids: (task as unknown as { evidence_ids?: string[] }).evidence_ids ?? null,
-        task_payload: task as unknown as Record<string, unknown>,
+        task_payload: {
+          ...(task as unknown as Record<string, unknown>),
+          content: parseTaskContent((task as unknown as { content?: unknown })?.content ?? {}) || {},
+        } as unknown as Json,
       }))
     );
 
@@ -861,13 +868,16 @@ export async function getCurrentPlan(userId: string) {
         recovery_plan_tasks (
           id,
           date,
-          action,
+          title,
           rationale,
           category,
+          pillar,
+          slug,
           time_suggestion,
           scheduled_at,
           recipe_id,
-          completed
+          completed,
+          task_payload
         )
       `)
       .eq('user_id', userId)
@@ -906,12 +916,15 @@ export async function getTodaysTask(userId: string) {
       .select(`
         id,
         date,
-        action,
+        title,
         rationale,
         category,
+        pillar,
+        slug,
         time_suggestion,
         recipe_id,
         completed,
+        task_payload,
         recovery_plans!inner(id, title)
       `)
       .eq('user_id', userId)

@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server'
 import { z } from 'zod'
 import { createSupabaseServerClient } from '@/lib/supabase/server'
+import { TaskContentSchema, parseTaskContent } from '@/lib/tasks/contentSchema'
 
 const TaskPayload = z.object({
   pillar: z.enum(['breath','sleep','food','movement','focus','joy']),
@@ -15,6 +16,7 @@ const TaskPayload = z.object({
   zeitgeber_tags: z.array(z.string()).optional(),
   default_circadian_slots: z.array(z.string()).optional(),
   version: z.number().int().positive().optional(),
+  content: TaskContentSchema.optional(),
 })
 
 const ImportTasksSchema = z.array(TaskPayload.strict()).min(1)
@@ -36,7 +38,8 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: parsed.error.flatten() }, { status: 400 })
   }
 
-  const { data, error } = await supabase.rpc('import_task_library', { tasks: parsed.data })
+  const tasks = parsed.data.map(t => ({ ...t, content: parseTaskContent((t as { content?: unknown }).content) || {} }))
+  const { data, error } = await supabase.rpc('import_task_library', { tasks })
   if (error) return NextResponse.json({ error: error.message }, { status: 400 })
   return NextResponse.json({ data })
 }

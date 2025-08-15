@@ -174,7 +174,7 @@ export async function getTodaysPlanTaskSummary() {
     // Align with our existing plan API shapes; fall back to simple fields
     const { data, error } = await supabase
       .from('recovery_plan_tasks')
-      .select('id, action, date, completed, user_id')
+    .select('id, title, date, completed, user_id')
       .eq('user_id', user.id)
       .eq('date', todayUtc)
       .eq('completed', false)
@@ -189,11 +189,11 @@ export async function getTodaysPlanTaskSummary() {
       return { success: true, hasTask: false, code: 'NO_PLAN_TASK' } as const;
     }
 
-    const task = data[0] as { id: string; action: string; date: string; completed: boolean };
+    const task = data[0] as { id: string; title: string; date: string; completed: boolean };
     return {
       success: true,
       hasTask: true,
-      task: { id: task.id, title: task.action, dueDate: task.date, status: task.completed ? 'completed' : 'pending' },
+      task: { id: task.id, title: task.title, dueDate: task.date, status: task.completed ? 'completed' : 'pending' },
     };
   } catch (e: unknown) {
     const err = e as { message?: string };

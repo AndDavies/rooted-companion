@@ -1,19 +1,24 @@
 "use client";
 
 import React from "react";
-import { Button } from "@/components/ui/button";
 import PlanningActions from "./PlanningActions";
 import { CheckCircle2, Circle } from "lucide-react";
+import { parseTaskContent } from "@/lib/tasks/contentSchema";
 
 export type RecoveryPlanTask = {
   id: string;
   date: string;
-  action: string;
+  title: string;
   rationale: string | null;
   category: string | null;
+  pillar?: string | null;
+  slug?: string | null;
   time_suggestion: string | null;
   scheduled_at?: string | null;
   completed: boolean | null;
+  task_payload?: { content?: unknown } | null;
+  duration_minutes?: number | null;
+  slot_hint?: string | null;
 };
 
 export type DayGroup = {
@@ -85,6 +90,9 @@ export default function DailyTabsClient({
   const activeDay = days[active];
   const completedTasks = activeDay?.tasks.filter((t) => t.completed).length ?? 0;
   const totalTasks = activeDay?.tasks.length ?? 0;
+  const pct = totalTasks > 0 ? Math.round((completedTasks / totalTasks) * 100) : 0;
+  const scheduledMinutes = (activeDay?.tasks || []).reduce((sum, t) => sum + (t.duration_minutes ?? 0), 0);
+  const completedMinutes = (activeDay?.tasks || []).reduce((sum, t) => sum + ((t.completed ? (t.duration_minutes ?? 0) : 0)), 0);
 
   const hasToday = todayIndex >= 0 && todayIndex < days.length;
 
@@ -121,11 +129,20 @@ export default function DailyTabsClient({
             {hasToday && active === todayIndex ? "Today’s Activities" : `${activeDay?.label} Activities`}
           </h2>
           <p className="text-sm text-neutral-600">
-            {completedTasks} of {totalTasks} complete
+            {completedTasks} of {totalTasks} complete • {completedMinutes}/{scheduledMinutes} min
           </p>
         </div>
-        {/* View Full Schedule placeholder */}
-        <Button variant="outline" size="sm">View Full Schedule</Button>
+        {/* Daily progress ring */}
+        <div className="flex items-center gap-3">
+          <div className="flex flex-col items-center">
+            <svg width="64" height="64" viewBox="0 0 36 36" className="-rotate-90">
+              <path d="M18 2a16 16 0 1 1 0 32 16 16 0 1 1 0-32" fill="none" stroke="#e5e7eb" strokeWidth="4" />
+              <path d="M18 2a16 16 0 1 1 0 32" fill="none" stroke="#2563eb" strokeLinecap="round"
+                strokeWidth="4" strokeDasharray={`${pct}, 100`} />
+            </svg>
+            <div className="mt-1 text-sm font-medium text-neutral-900">{pct}%</div>
+          </div>
+        </div>
       </div>
 
       {/* Tasks list */}
@@ -170,11 +187,103 @@ export default function DailyTabsClient({
                 </div>
 
                 <div>
-                  <h4 className="font-medium text-neutral-900 text-sm mb-1">{task.action}</h4>
+                  <h4 className="font-medium text-neutral-900 text-sm mb-1">{task.title}</h4>
                   {task.rationale ? (
-                    <p className="text-xs text-neutral-600">{task.rationale}</p>
+                    <p className="text-xs text-neutral-600">{task.rationale.length > 140 ? `${task.rationale.slice(0, 137)}...` : task.rationale}</p>
                   ) : null}
                 </div>
+
+                {/* Content collapsibles */}
+                {(() => {
+                  const content = parseTaskContent((task.task_payload as { content?: unknown } | undefined)?.content) || {}
+                  const blocks: React.ReactNode[] = []
+                  const hasWhy = (task.rationale && task.rationale.length > 0) || (content.description && content.description.length > 0)
+                  if (hasWhy) {
+                    blocks.push(
+                      <details key="why" className="mt-1">
+                        <summary className="text-xs font-medium text-neutral-800 cursor-pointer">Why</summary>
+                        <div className="mt-1 text-xs text-neutral-600 space-y-1">
+                          {task.rationale ? <p>{task.rationale}</p> : null}
+                          {content.description ? <p>{content.description}</p> : null}
+                        </div>
+                      </details>
+                    )
+                  }
+                  if (Array.isArray(content.how_to) && content.how_to.length) {
+                    blocks.push(
+                      <details key="howto" className="mt-1">
+                        <summary className="text-xs font-medium text-neutral-800 cursor-pointer">How to</summary>
+                        <ol className="mt-1 list-decimal list-inside text-xs text-neutral-700 space-y-1">
+                          {content.how_to.map((s, i) => (
+                            <li key={i}>{s}</li>
+                          ))}
+                        </ol>
+                      </details>
+                    )
+                  }
+                  if (Array.isArray(content.cues) && content.cues.length) {
+                    blocks.push(
+                      <details key="cues" className="mt-1">
+                        <summary className="text-xs font-medium text-neutral-800 cursor-pointer">Cues</summary>
+                        <div className="mt-1 flex flex-wrap gap-1">
+                          {content.cues.map((c, i) => (
+                            <span key={i} className="px-2 py-0.5 bg-neutral-100 text-neutral-700 text-xs rounded-full border">
+                              {c}
+                            </span>
+                          ))}
+                        </div>
+                      </details>
+                    )
+                  }
+                  if (Array.isArray(content.modifications) && content.modifications.length) {
+                    blocks.push(
+                      <details key="mods" className="mt-1">
+                        <summary className="text-xs font-medium text-neutral-800 cursor-pointer">Modifications</summary>
+                        <ul className="mt-1 list-disc list-inside text-xs text-neutral-700 space-y-1">
+                          {content.modifications.map((m, i) => (
+                            <li key={i}>{m}</li>
+                          ))}
+                        </ul>
+                      </details>
+                    )
+                  }
+                  if (Array.isArray(content.common_mistakes) && content.common_mistakes.length) {
+                    blocks.push(
+                      <details key="mistakes" className="mt-1">
+                        <summary className="text-xs font-medium text-neutral-800 cursor-pointer">Common mistakes</summary>
+                        <ul className="mt-1 list-disc list-inside text-xs text-neutral-700 space-y-1">
+                          {content.common_mistakes.map((m, i) => (
+                            <li key={i}>{m}</li>
+                          ))}
+                        </ul>
+                      </details>
+                    )
+                  }
+                  if (Array.isArray(content.media) && content.media.length) {
+                    blocks.push(
+                      <details key="media" className="mt-1">
+                        <summary className="text-xs font-medium text-neutral-800 cursor-pointer">Media</summary>
+                        <div className="mt-1 space-y-2">
+                          {content.media.map((m, i) => (
+                            <div key={i} className="space-y-1">
+                              {m.type === 'video' ? (
+                                <video controls playsInline className="w-full rounded border">
+                                  <source src={m.url} />
+                                </video>
+                              ) : (
+                                <audio controls className="w-full">
+                                  <source src={m.url} />
+                                </audio>
+                              )}
+                              {m.caption ? <div className="text-[11px] text-neutral-500">{m.caption}</div> : null}
+                            </div>
+                          ))}
+                        </div>
+                      </details>
+                    )
+                  }
+                  return <div className="space-y-1">{blocks}</div>
+                })()}
 
                 {/* Only allow marking complete on Today */}
                 {!task.completed && hasToday && active === todayIndex && <PlanningActions taskId={task.id} />}
@@ -191,11 +300,11 @@ export default function DailyTabsClient({
             Done ({completedTasks})
           </summary>
           <div className="mt-3 space-y-2">
-            {activeDay?.tasks
+              {activeDay?.tasks
               .filter((t) => t.completed)
               .map((t) => (
                 <div key={`done-${t.id}`} className="text-sm text-neutral-600">
-                  {t.action}
+                  {t.title}
                 </div>
               ))}
           </div>

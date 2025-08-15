@@ -7,7 +7,7 @@ export type Json =
   | Json[]
 
 export type Database = {
-  // Allows to automatically instanciate createClient with right options
+  // Allows to automatically instantiate createClient with right options
   // instead of createClient<Database, { PostgrestVersion: 'XX' }>(URL, KEY)
   __InternalSupabase: {
     PostgrestVersion: "12.2.3 (519615d)"
@@ -500,64 +500,82 @@ export type Database = {
         }
         Relationships: [
           {
-            foreignKeyName: "recovery_plan_reflections_plan_id_fkey",
-            columns: ["plan_id"],
-            isOneToOne: false,
-            referencedRelation: "recovery_plans",
-            referencedColumns: ["id"],
+            foreignKeyName: "recovery_plan_reflections_plan_id_fkey"
+            columns: ["plan_id"]
+            isOneToOne: false
+            referencedRelation: "recovery_plans"
+            referencedColumns: ["id"]
           },
         ]
       }
       recovery_plan_tasks: {
         Row: {
-          action: string
           category: string | null
           completed: boolean | null
           created_at: string | null
           date: string
+          duration_minutes: number | null
+          evidence_ids: string[] | null
           id: string
+          pillar: string | null
           plan_id: string | null
           rationale: string | null
-          scheduled_at: string | null
           recipe_id: string | null
+          scheduled_at: string | null
+          slot_hint: string | null
+          slug: string | null
+          task_payload: Json | null
           time_suggestion: string | null
+          title: string
           user_id: string | null
         }
         Insert: {
-          action: string
           category?: string | null
           completed?: boolean | null
           created_at?: string | null
           date: string
+          duration_minutes?: number | null
+          evidence_ids?: string[] | null
           id?: string
+          pillar?: string | null
           plan_id?: string | null
           rationale?: string | null
-          scheduled_at?: string | null
           recipe_id?: string | null
+          scheduled_at?: string | null
+          slot_hint?: string | null
+          slug?: string | null
+          task_payload?: Json | null
           time_suggestion?: string | null
+          title: string
           user_id?: string | null
         }
         Update: {
-          action?: string
           category?: string | null
           completed?: boolean | null
           created_at?: string | null
           date?: string
+          duration_minutes?: number | null
+          evidence_ids?: string[] | null
           id?: string
+          pillar?: string | null
           plan_id?: string | null
           rationale?: string | null
-          scheduled_at?: string | null
           recipe_id?: string | null
+          scheduled_at?: string | null
+          slot_hint?: string | null
+          slug?: string | null
+          task_payload?: Json | null
           time_suggestion?: string | null
+          title?: string
           user_id?: string | null
         }
         Relationships: [
           {
-            foreignKeyName: "recovery_plan_tasks_plan_id_fkey",
-            columns: ["plan_id"],
-            isOneToOne: false,
-            referencedRelation: "recovery_plans",
-            referencedColumns: ["id"],
+            foreignKeyName: "recovery_plan_tasks_plan_id_fkey"
+            columns: ["plan_id"]
+            isOneToOne: false
+            referencedRelation: "recovery_plans"
+            referencedColumns: ["id"]
           },
         ]
       }
@@ -567,27 +585,45 @@ export type Database = {
           description: string | null
           end_date: string
           id: string
+          length_days: number | null
+          metadata: Json | null
+          mode: string | null
+          source: string | null
+          source_ref: string | null
           start_date: string
           title: string
           user_id: string | null
+          version: number | null
         }
         Insert: {
           created_at?: string | null
           description?: string | null
           end_date: string
           id?: string
+          length_days?: number | null
+          metadata?: Json | null
+          mode?: string | null
+          source?: string | null
+          source_ref?: string | null
           start_date: string
           title: string
           user_id?: string | null
+          version?: number | null
         }
         Update: {
           created_at?: string | null
           description?: string | null
           end_date?: string
           id?: string
+          length_days?: number | null
+          metadata?: Json | null
+          mode?: string | null
+          source?: string | null
+          source_ref?: string | null
           start_date?: string
           title?: string
           user_id?: string | null
+          version?: number | null
         }
         Relationships: []
       }
@@ -695,6 +731,7 @@ export type Database = {
       }
       task_library: {
         Row: {
+          content: Json | null
           contraindications: string[] | null
           created_at: string | null
           default_circadian_slots: string[] | null
@@ -712,6 +749,7 @@ export type Database = {
           zeitgeber_tags: string[] | null
         }
         Insert: {
+          content?: Json | null
           contraindications?: string[] | null
           created_at?: string | null
           default_circadian_slots?: string[] | null
@@ -729,6 +767,7 @@ export type Database = {
           zeitgeber_tags?: string[] | null
         }
         Update: {
+          content?: Json | null
           contraindications?: string[] | null
           created_at?: string | null
           default_circadian_slots?: string[] | null
@@ -1175,9 +1214,9 @@ export type Database = {
         Args: { p_connection_id: string }
         Returns: {
           metric_type: string
-          value: number
-          unit: string
           ts: string
+          unit: string
+          value: number
         }[]
       }
       import_program_templates: {
@@ -1201,37 +1240,37 @@ export type Database = {
       }
       kb_match_documents: {
         Args: {
-          query_embedding: string
           match_count?: number
           min_score?: number
+          query_embedding: string
         }
         Returns: {
-          doc_id: string
           chunk_id: string
-          title: string
-          source_url: string
           content: string
+          doc_id: string
           score: number
+          source_url: string
+          title: string
         }[]
       }
       match_documents: {
-        Args: { query_embedding: string; match_count?: number; filter?: Json }
+        Args: { filter?: Json; match_count?: number; query_embedding: string }
         Returns: {
-          id: string
           content: string
-          metadata: Json
-          embedding: string
           created_at: string
           distance: number
+          embedding: string
+          id: string
+          metadata: Json
         }[]
       }
       match_documents_edge: {
-        Args: { query_embedding: string; match_count?: number; filter?: Json }
+        Args: { filter?: Json; match_count?: number; query_embedding: string }
         Returns: {
-          id: string
           content: string
-          metadata: Json
           distance: number
+          id: string
+          metadata: Json
         }[]
       }
       pg_advisory_unlock_bigint: {
@@ -1402,4 +1441,3 @@ export const Constants = {
     },
   },
 } as const
-

@@ -1,7 +1,8 @@
 "use client"
 import { useCallback, useMemo, useState } from 'react'
-import { useToast } from '@/components/ui/useToast'
 import { z } from 'zod'
+import { TaskContentSchema, parseTaskContent } from '@/lib/tasks/contentSchema'
+import MediaRepeater, { MediaItem } from '@/components/admin/MediaRepeater'
 
 const TaskPayload = z.object({
   pillar: z.enum(['breath','sleep','food','movement','focus','joy']),
@@ -16,6 +17,7 @@ const TaskPayload = z.object({
   zeitgeber_tags: z.array(z.string()).optional(),
   default_circadian_slots: z.array(z.string()).optional(),
   version: z.number().int().positive().optional(),
+  content: TaskContentSchema.optional(),
 }).refine((v) => {
   if (v.duration_min != null || v.duration_max != null) {
     if (v.duration_min == null || v.duration_max == null) return false
@@ -25,6 +27,21 @@ const TaskPayload = z.object({
 }, { message: 'If duration is provided, both min and max must be positive and max >= min' })
 
 type Task = z.infer<typeof TaskPayload>
+
+type ContentDraft = {
+  description?: string
+  how_to?: string[]
+  cues?: string[]
+  modifications?: string[]
+  common_mistakes?: string[]
+  media?: MediaItem[]
+  alternatives?: { slug: string; note?: string }[]
+  contraindications?: string[]
+  equipment?: string[]
+  location?: string
+  intensity_step?: number | null
+  effort_rpe?: number | null
+}
 
 export function TaskCreateEditModal({
   open,
@@ -37,15 +54,26 @@ export function TaskCreateEditModal({
   initial?: Partial<Task>
   onSaved: () => void
 }) {
-  const { toast } = useToast()
   const [pending, setPending] = useState(false)
-  const [values, setValues] = useState<Partial<Task>>(() => initial ?? {})
+  const [values, setValues] = useState<Partial<Task>>(() => initial ?? {
+    intensity_tags: [],
+    evidence_refs: [],
+    zeitgeber_tags: [],
+    default_circadian_slots: [],
+  })
   const [error, setError] = useState<string | null>(null)
 
   // UI-only state
   const [fixedDuration, setFixedDuration] = useState(false)
   const [canEditSlug, setCanEditSlug] = useState(false)
-  const [evidence, setEvidence] = useState<{ label: string; url: string; type?: 'RCT' | 'Review' | 'Meta' | 'Other' }[]>([])
+  const [contentDraft, setContentDraft] = useState<ContentDraft>(() => {
+    const raw = (initial as unknown as { content?: unknown })?.content
+    let value: unknown = raw
+    if (typeof raw === 'string') {
+      try { value = JSON.parse(raw) } catch { value = {} }
+    }
+    return (parseTaskContent(value) || {}) as ContentDraft
+  })
 
   // Curated options
   const pillarOptions: { label: string, value: Task['pillar'] }[] = [
@@ -56,29 +84,6 @@ export function TaskCreateEditModal({
     { label: 'Mindset', value: 'focus' },
     { label: 'Joy', value: 'joy' },
   ]
-
-  const zeitgeberOptions = [
-    { label: 'Light', value: 'light', hint: 'Bright outdoor/daylight exposure to advance/stabilize circadian phase' },
-    { label: 'Feeding', value: 'feeding', hint: 'Caloric intake that anchors the daily eating window' },
-    { label: 'Movement', value: 'movement', hint: 'Exercise or physical activity as a secondary time cue' },
-    { label: 'Temperature', value: 'temperature', hint: 'Cold/heat exposure affecting arousal and sleep pressure' },
-    { label: 'Stimulant', value: 'stimulant', hint: 'Caffeine-like substances influencing alertness and cutoff rules' },
-    { label: 'Social', value: 'social', hint: 'Timed social interaction that reinforces routine' },
-    { label: 'Dark', value: 'dark', hint: 'Light restriction/blue-light hygiene to support melatonin onset' },
-  ] as const
-
-  const circadianOptions = [
-    { label: 'Post-wake (0–2h)', value: 'post_wake_0_2h' },
-    { label: 'Mid-morning (2–5h)', value: 'mid_morning_2_5h' },
-    { label: 'Early afternoon (13–15h)', value: 'early_afternoon_13_15' },
-    { label: 'Late afternoon (15–18h)', value: 'late_afternoon_15_18' },
-    { label: 'Early evening (18–20h)', value: 'early_evening_18_20' },
-    { label: 'Wind-down (−120m → bed)', value: 'wind_down_bed_minus_120_0' },
-    { label: 'Dark window (bed → wake)', value: 'dark_window_bed_wake' },
-  ] as const
-
-  const intensityLevels = [ 'Low', 'Moderate', 'High', 'Beginner', 'Advanced' ] as const
-  const contraindicationOptions = [ 'acute injury', 'hypertension', 'pregnancy, 2nd–3rd tri', 'heat-sensitive', 'caffeine-sensitive' ] as const
 
   // Save gating
   const missingReasons = useMemo(() => {
@@ -119,6 +124,103 @@ export function TaskCreateEditModal({
     }))
   }
 
+  function parseLines(val: string): string[] | undefined {
+    const lines = val.split('\n').map(s => s.trim()).filter(Boolean)
+    return lines.length ? lines : undefined
+  }
+
+  function isValidUrl(url: string | undefined): boolean {
+    if (!url) return false
+    try { new URL(url); return true } catch { return false }
+  }
+
+  function normalizeUrlStrict(url: string): string {
+    try {
+      const u = new URL(url)
+      u.host = u.host.toLowerCase()
+      if (u.pathname.endsWith('/') && u.pathname !== '/') {
+        u.pathname = u.pathname.replace(/\/+$/, '')
+      }
+      return u.toString()
+    } catch {
+      return url
+    }
+  }
+
+  function dedupeStringArray(arr: string[] | undefined): string[] {
+    const out: string[] = []
+    const seen = new Set<string>()
+    for (const s of arr ?? []) {
+      const v = s.trim()
+      if (!v) continue
+      if (!seen.has(v)) { seen.add(v); out.push(v) }
+    }
+    return out
+  }
+
+  const allowedZeitgeber = ['morning','midday','afternoon','evening','night'] as const
+  type Zeitgeber = typeof allowedZeitgeber[number]
+
+  function toggleArrayValue(key: 'zeitgeber_tags' | 'default_circadian_slots', val: Zeitgeber) {
+    setValues(v => {
+      const cur = (v[key] as string[] | undefined) ?? []
+      const has = cur.includes(val)
+      const next = has ? cur.filter(x => x !== val) : [...cur, val]
+      return { ...v, [key]: dedupeStringArray(next.map(s => s.toLowerCase())) }
+    })
+  }
+
+  function addTagToArray(key: 'intensity_tags' | 'evidence_refs', input: string) {
+    const val = input.trim()
+    if (!val) return
+    if (key === 'evidence_refs' && !isValidUrl(val)) {
+      setError('Evidence URL is invalid')
+      return
+    }
+    setError(null)
+    const toStore = key === 'evidence_refs' ? normalizeUrlStrict(val) : val
+    setValues(v => {
+      const cur = (v[key] as string[] | undefined) ?? []
+      const next = dedupeStringArray([...cur, toStore])
+      return { ...v, [key]: next }
+    })
+  }
+
+  function removeTagFromArray(key: 'intensity_tags' | 'evidence_refs', val: string) {
+    setValues(v => {
+      const cur = (v[key] as string[] | undefined) ?? []
+      return { ...v, [key]: cur.filter(x => x !== val) }
+    })
+  }
+
+  function buildContentFromDraft(d: ContentDraft) {
+    const out: ContentDraft = {}
+    if (d.description) out.description = d.description
+    if (d.how_to?.length) out.how_to = d.how_to
+    if (d.cues?.length) out.cues = d.cues
+    if (d.modifications?.length) out.modifications = d.modifications
+    if (d.common_mistakes?.length) out.common_mistakes = d.common_mistakes
+    if (d.alternatives?.length) out.alternatives = d.alternatives
+    if (d.contraindications?.length) out.contraindications = d.contraindications
+    if (d.equipment?.length) out.equipment = d.equipment
+    if (d.location) out.location = d.location
+    if (d.intensity_step != null) out.intensity_step = d.intensity_step
+    if (d.effort_rpe != null) out.effort_rpe = d.effort_rpe
+    if (Array.isArray(d.media)) {
+      const cleaned = d.media
+        .map(m => {
+          if (!isValidUrl(m.url)) return null
+          const transcript = isValidUrl(m.transcript_url || undefined) ? m.transcript_url : undefined
+          const start = (m.start_time || '').trim() || undefined
+          const caption = (m.caption || '').trim() || undefined
+          return { type: m.type, url: m.url, caption, start_time: start, transcript_url: transcript }
+        })
+        .filter(Boolean) as Exclude<ContentDraft['media'], undefined>
+      if (cleaned.length) out.media = cleaned
+    }
+    return out
+  }
+
   const submit = useCallback(async () => {
     setPending(true)
     setError(null)
@@ -128,31 +230,51 @@ export function TaskCreateEditModal({
       setError(parsed.error.errors.map(e => `${e.path.join('.')}: ${e.message}`).join('; '))
       return
     }
+    // Sanitize, omit empty keys, and filter invalid media prior to validation
+    const cleaned = buildContentFromDraft(contentDraft)
+    const contentValidation = TaskContentSchema.safeParse(cleaned)
+    const safeContent = contentValidation.success ? (parseTaskContent(contentValidation.data) || {}) : {}
+    if (!contentValidation.success) {
+      setError(prev => {
+        const issues = contentValidation.error.errors.map(e => `${e.path.join('.')}: ${e.message}`).join('; ')
+        return [prev, `Content invalid; saving empty content. ${issues}`].filter(Boolean).join(' | ')
+      })
+    }
     const res = await fetch('/api/admin/tasks/upsert', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
         ...parsed.data,
-        // Map structured evidence to string array for backend compatibility
-        evidence_refs: evidence.length
-          ? evidence.map(e => e.type ? `${e.label} — ${e.url} [${e.type}]` : `${e.label} — ${e.url}`)
-          : (values.evidence_refs ?? []),
+        content: safeContent,
       }),
     })
     const body = await res.json().catch(() => ({}))
     if (!res.ok) {
       setPending(false)
       setError(String(body?.error ?? 'Request failed'))
-      toast({ title: 'Failed to save task', description: String(body?.error ?? 'Error'), variant: 'destructive' })
       return
     }
-    toast({ title: 'Task saved', variant: 'success' })
     setPending(false)
     onSaved()
     onClose()
-  }, [values, onSaved, onClose, toast, evidence])
+  }, [values, onSaved, onClose, contentDraft])
 
   if (!open) return null
+
+  // Tooltip helper with improved styling and reliable tooltip
+  const Hint = ({ text }: { text: string }) => (
+    <div className="relative group">
+      <span 
+        className="ml-2 inline-flex items-center justify-center w-5 h-5 rounded-full bg-blue-100 text-blue-600 text-sm font-medium cursor-help border border-blue-200 hover:bg-blue-200 transition-colors" 
+      >
+        ?
+      </span>
+      <div className="absolute bottom-full left-0 mb-2 px-3 py-2 bg-gray-900 text-white text-xs rounded-lg opacity-0 group-hover:opacity-100 transition-opacity duration-200 pointer-events-none z-50 w-80">
+        <div className="whitespace-normal leading-relaxed">{text}</div>
+        <div className="absolute top-full left-4 w-0 h-0 border-l-4 border-r-4 border-t-4 border-transparent border-t-gray-900"></div>
+      </div>
+    </div>
+  )
 
   return (
     <div className="fixed inset-0 z-40 bg-black/40 flex items-center justify-center" onKeyDown={(e) => { if (e.key === 'Escape' && !pending) onClose() }}>
@@ -227,149 +349,152 @@ export function TaskCreateEditModal({
                   />
                 </label>
 
+                {/* Structured content editor */}
                 <div className="sm:col-span-2">
-                  <div className="text-sm">Intensity level</div>
-                  <div className="mt-1 flex flex-wrap gap-3">
-                    {intensityLevels.map(level => {
-                      const code = level.toLowerCase()
-                      const selected = (values.intensity_tags ?? []).includes(code)
-                      return (
-                        <label key={level} className={`px-3 h-9 inline-flex items-center rounded-full border cursor-pointer ${selected ? 'bg-neutral-900 text-white' : ''}`}>
-                          <input
-                            type="radio"
-                            name="intensity"
-                            className="hidden"
-                            checked={selected}
-                            onChange={() => setValues(v => ({ ...v, intensity_tags: [code] }))}
-                          />
-                          {level}
-                        </label>
-                      )
-                    })}
-                  </div>
+                  <div className="text-sm flex items-center">Description <Hint text="Purpose: Give the overall context and purpose of this task so the user knows why it's included. Example: 'Box breathing is a calming breath technique to reset the nervous system before stressful events.'" /></div>
+                  <textarea className="mt-1 w-full border rounded px-2 py-2 min-h-[80px]" value={contentDraft.description ?? ''} onChange={e => setContentDraft(d => ({ ...d, description: e.target.value || undefined }))} />
                 </div>
 
                 <div className="sm:col-span-2">
-                  <div className="text-sm">Zeitgeber tags</div>
-                  <div className="text-[11px] text-neutral-500 mt-1">
-                    Zeitgeber tags — Zeitgeber is German for “time giver.” These tags classify the type of physiological cue a task delivers to the body clock. They help the scheduler place tasks at the most biologically effective time of day. Coaches should choose the tag(s) that best match the primary circadian signal the task provides, not its general purpose or fitness goal.
-                  </div>
-                  <div className="mt-2 flex flex-wrap gap-2">
-                    {zeitgeberOptions.map(opt => {
-                      const selected = (values.zeitgeber_tags ?? []).includes(opt.value)
-                      return (
-                        <button type="button" key={opt.value}
-                          className={`px-3 h-9 rounded-full border text-sm ${selected ? 'bg-blue-600 border-blue-600 text-white' : 'bg-blue-50 border-blue-200 text-blue-700'}`}
-                          title={opt.hint}
-                          onClick={() => setValues(v => {
-                            const curr = new Set(v.zeitgeber_tags ?? [])
-                            if (curr.has(opt.value)) curr.delete(opt.value); else curr.add(opt.value)
-                            return { ...v, zeitgeber_tags: Array.from(curr) }
-                          })}
-                        >{opt.label}</button>
-                      )
-                    })}
-                  </div>
+                  <div className="text-sm flex items-center">How to <Hint text="Purpose: Step-by-step instructions for completing the task correctly. Keep each step clear and concise. Example: '1. Inhale through your nose for 4 seconds. 2. Hold for 4 seconds. 3. Exhale through your mouth for 4 seconds. 4. Hold for 4 seconds.'" /></div>
+                  <textarea className="mt-1 w-full border rounded px-2 py-2 min-h-[100px]" placeholder="One step per line" value={(contentDraft.how_to ?? []).join('\n')} onChange={e => setContentDraft(d => ({ ...d, how_to: parseLines(e.target.value) }))} />
                 </div>
 
                 <div className="sm:col-span-2">
-                  <div className="text-sm">Default circadian slots</div>
-                  <div className="mt-2 flex flex-wrap gap-2">
-                    {circadianOptions.map(opt => {
-                      const selected = (values.default_circadian_slots ?? []).includes(opt.value)
-                      return (
-                        <button type="button" key={opt.value}
-                          className={`px-3 h-9 rounded-full border text-sm ${selected ? 'bg-emerald-600 border-emerald-600 text-white' : 'bg-emerald-50 border-emerald-200 text-emerald-700'}`}
-                          onClick={() => setValues(v => {
-                            const curr = new Set(v.default_circadian_slots ?? [])
-                            if (curr.has(opt.value)) curr.delete(opt.value); else curr.add(opt.value)
-                            return { ...v, default_circadian_slots: Array.from(curr) }
-                          })}
-                        >{opt.label}</button>
-                      )
-                    })}
-                  </div>
+                  <div className="text-sm flex items-center">Cues <Hint text="Purpose: Short reminders that help the user focus on key points during the task. Example: 'Relax your shoulders.' / 'Breathe through your nose.' / 'Keep movements slow and controlled.'" /></div>
+                  <textarea className="mt-1 w-full border rounded px-2 py-2 min-h-[80px]" placeholder="One cue per line" value={(contentDraft.cues ?? []).join('\n')} onChange={e => setContentDraft(d => ({ ...d, cues: parseLines(e.target.value) }))} />
                 </div>
 
                 <div className="sm:col-span-2">
-                  <div className="text-sm">Contraindications</div>
-                  <div className="mt-2 flex flex-wrap gap-2">
-                    {contraindicationOptions.map(opt => {
-                      const selected = (values.contraindications ?? []).includes(opt)
-                      return (
-                        <button type="button" key={opt}
-                          className={`px-3 h-9 rounded-full border text-sm ${selected ? 'bg-rose-600 border-rose-600 text-white' : 'bg-rose-50 border-rose-200 text-rose-700'}`}
-                          onClick={() => setValues(v => {
-                            const curr = new Set(v.contraindications ?? [])
-                            if (curr.has(opt)) curr.delete(opt); else curr.add(opt)
-                            return { ...v, contraindications: Array.from(curr) }
-                          })}
-                        >{opt}</button>
-                      )
-                    })}
-                  </div>
-                  <div className="mt-2 flex gap-2">
-                    <input className="flex-1 border rounded px-2 h-9" placeholder="Add custom tag and press Enter" onKeyDown={(e) => {
-                      if (e.key === 'Enter') {
-                        const val = (e.target as HTMLInputElement).value.trim()
-                        if (val) setValues(v => ({ ...v, contraindications: [ ...(v.contraindications ?? []), val ] }));
-                        (e.target as HTMLInputElement).value = ''
-                      }
-                    }} />
-                  </div>
+                  <div className="text-sm flex items-center">Modifications <Hint text="Purpose: Ways to adapt the task for different ability levels, limitations, or available time. Example: 'If you feel lightheaded, try a 3-3-3-3 breathing pattern instead of 4-4-4-4.'" /></div>
+                  <textarea className="mt-1 w-full border rounded px-2 py-2 min-h-[80px]" placeholder="One modification per line" value={(contentDraft.modifications ?? []).join('\n')} onChange={e => setContentDraft(d => ({ ...d, modifications: parseLines(e.target.value) }))} />
                 </div>
 
                 <div className="sm:col-span-2">
-                  <div className="text-sm">Evidence refs</div>
-                  <div className="mt-2 space-y-2">
-                    {evidence.map((it, idx) => (
-                      <div key={idx} className="grid grid-cols-1 md:grid-cols-6 gap-2">
-                        <input className="md:col-span-2 border rounded px-2 h-9" placeholder="Label"
-                          value={it.label}
-                          onChange={(e) => setEvidence(arr => arr.map((x, i) => i === idx ? { ...x, label: e.target.value } : x))}
-                        />
-                        <input className="md:col-span-3 border rounded px-2 h-9" placeholder="URL or DOI"
-                          value={it.url}
-                          onChange={(e) => setEvidence(arr => arr.map((x, i) => i === idx ? { ...x, url: e.target.value } : x))}
-                        />
-                        <select className="md:col-span-1 border rounded px-2 h-9"
-                          value={it.type ?? 'Other'}
-                          onChange={(e) => setEvidence(arr => arr.map((x, i) => i === idx ? { ...x, type: e.target.value as 'RCT' | 'Review' | 'Meta' | 'Other' } : x))}
-                        >
-                          {['RCT','Review','Meta','Other'].map(t => <option key={t} value={t}>{t}</option>)}
-                        </select>
-                        <div className="md:col-span-6 flex justify-end">
-                          <button type="button" className="px-2 py-1 border rounded" onClick={() => setEvidence(arr => arr.filter((_, i) => i !== idx))}>Remove</button>
-                        </div>
-                      </div>
-                    ))}
-                    <button type="button" className="px-3 h-9 rounded border" onClick={() => setEvidence(arr => [...arr, { label: '', url: '' }])}>Add reference</button>
-                  </div>
+                  <div className="text-sm flex items-center">Common mistakes <Hint text="Purpose: Frequent errors that reduce effectiveness or increase risk, so the user can avoid them. Example: 'Holding the breath too tightly.' / 'Shrugging shoulders during inhale.'" /></div>
+                  <textarea className="mt-1 w-full border rounded px-2 py-2 min-h-[80px]" placeholder="One mistake per line" value={(contentDraft.common_mistakes ?? []).join('\n')} onChange={e => setContentDraft(d => ({ ...d, common_mistakes: parseLines(e.target.value) }))} />
                 </div>
 
-                <label className="text-sm">Version
-                  <input type="number" className="mt-1 w-full border rounded px-2 h-9"
-                    value={values.version ?? 1}
-                    onChange={(e) => setValues(v => ({ ...v, version: e.target.value === '' ? undefined : Number(e.target.value) }))}
+                <div className="sm:col-span-2">
+                  <div className="text-sm flex items-center">Media <Hint text="Attach optional video/audio to guide the user. Keep clips short (≤2–3 min). Add a caption that says what they'll learn." /></div>
+                  <MediaRepeater 
+                    value={contentDraft.media ?? []} 
+                    onChange={(media) => setContentDraft(d => ({ ...d, media: media.length ? media : undefined }))} 
                   />
+                </div>
+
+                {/* Create-only advanced arrays */}
+                {!initial && (
+                  <div className="sm:col-span-2 space-y-4">
+                    <div>
+                      <div className="text-sm flex items-center">Intensity tags <Hint text="Free-form tags to characterize difficulty (e.g., 'gentle', 'mobility', 'calming'). Use to aid search and grouping." /></div>
+                      <div className="mt-2 flex flex-wrap gap-2">
+                        {(values.intensity_tags ?? []).map(t => (
+                          <span key={t} className="inline-flex items-center gap-1 px-2 py-0.5 border rounded-full text-xs">
+                            {t}
+                            <button type="button" onClick={() => removeTagFromArray('intensity_tags', t)} aria-label={`Remove ${t}`}>×</button>
+                          </span>
+                        ))}
+                      </div>
+                      <div className="mt-2 flex gap-2">
+                        <input className="flex-1 border rounded px-2 h-9" placeholder="Add tag and press Enter" onKeyDown={(e) => {
+                          if (e.key === 'Enter') { e.preventDefault(); addTagToArray('intensity_tags', (e.target as HTMLInputElement).value); (e.target as HTMLInputElement).value = '' }
+                        }} />
+                        <button className="px-3 h-9 border rounded" onClick={(e) => {
+                          const ip = (e.currentTarget.previousElementSibling as HTMLInputElement)
+                          addTagToArray('intensity_tags', ip?.value ?? ''); if (ip) ip.value = ''
+                        }}>Add</button>
+                      </div>
+                    </div>
+
+                    <div>
+                      <div className="text-sm flex items-center">Evidence refs <Hint text="External sources supporting this task (URLs). We'll validate and normalize the links." /></div>
+                      <div className="mt-2 flex flex-wrap gap-2">
+                        {(values.evidence_refs ?? []).map(u => (
+                          <span key={u} className="inline-flex items-center gap-1 px-2 py-0.5 border rounded-full text-xs">
+                            {u}
+                            <button type="button" onClick={() => removeTagFromArray('evidence_refs', u)} aria-label={`Remove ${u}`}>×</button>
+                          </span>
+                        ))}
+                      </div>
+                      <div className="mt-2 flex gap-2">
+                        <input className="flex-1 border rounded px-2 h-9" placeholder="https://example.com/article" onKeyDown={(e) => {
+                          if (e.key === 'Enter') { e.preventDefault(); addTagToArray('evidence_refs', (e.target as HTMLInputElement).value); (e.target as HTMLInputElement).value = '' }
+                        }} />
+                        <button className="px-3 h-9 border rounded" onClick={(e) => {
+                          const ip = (e.currentTarget.previousElementSibling as HTMLInputElement)
+                          addTagToArray('evidence_refs', ip?.value ?? ''); if (ip) ip.value = ''
+                        }}>Add</button>
+                      </div>
+                    </div>
+
+                    <div>
+                      <div className="text-sm flex items-center">Zeitgeber tags <Hint text="Optional scheduling zeitgebers (time-of-day cues). Allowed: morning, midday, afternoon, evening, night." /></div>
+                      <div className="mt-2 flex flex-wrap gap-3">
+                        {allowedZeitgeber.map(z => (
+                          <label key={`zg-${z}`} className="text-sm inline-flex items-center gap-2">
+                            <input type="checkbox" checked={(values.zeitgeber_tags ?? []).includes(z)} onChange={() => toggleArrayValue('zeitgeber_tags', z)} />
+                            {z}
+                          </label>
+                        ))}
+                      </div>
+                    </div>
+
+                    <div>
+                      <div className="text-sm flex items-center">Default circadian slots <Hint text="Default recommended windows for this task. Select 0 or more. Allowed: morning, midday, afternoon, evening, night." /></div>
+                      <div className="mt-2 flex flex-wrap gap-3">
+                        {allowedZeitgeber.map(z => (
+                          <label key={`cs-${z}`} className="text-sm inline-flex items-center gap-2">
+                            <input type="checkbox" checked={(values.default_circadian_slots ?? []).includes(z)} onChange={() => toggleArrayValue('default_circadian_slots', z)} />
+                            {z}
+                          </label>
+                        ))}
+                      </div>
+                    </div>
+                  </div>
+                )}
+
+                <div className="sm:col-span-2">
+                  <div className="text-sm flex items-center">Alternatives <Hint text="Purpose: Other tasks that achieve a similar effect, useful if the user wants variety or needs to swap. Example: 'Physiological sigh for rapid stress downshift.'" /></div>
+                  <textarea className="mt-1 w-full border rounded px-2 py-2 min-h-[80px]" placeholder="slug,note" value={(contentDraft.alternatives ?? []).map(a => `${a.slug}${a.note ? ',' + a.note : ''}`).join('\n')} onChange={e => {
+                    const lines = parseLines(e.target.value)
+                    const alts = (lines ?? []).map(line => {
+                      const [slug, ...rest] = line.split(',').map(s => s.trim())
+                      const note = rest.join(',') || undefined
+                      return { slug, note }
+                    }).filter(a => a.slug)
+                    setContentDraft(d => ({ ...d, alternatives: alts.length ? alts : undefined }))
+                  }} />
+                </div>
+
+                <div className="sm:col-span-2">
+                  <div className="text-sm flex items-center">Contraindications <Hint text="Purpose: Conditions or situations where the task shouldn't be done for safety reasons. Example: 'Avoid breath-holding if you have uncontrolled high blood pressure.'" /></div>
+                  <textarea className="mt-1 w-full border rounded px-2 py-2 min-h-[80px]" placeholder="One per line" value={(contentDraft.contraindications ?? []).join('\n')} onChange={e => setContentDraft(d => ({ ...d, contraindications: parseLines(e.target.value) }))} />
+                </div>
+
+                <div className="sm:col-span-2">
+                  <div className="text-sm flex items-center">Equipment <Hint text="Purpose: Any gear the user needs to perform the task as described. Example: 'Yoga mat' / 'Resistance band' / 'Timer.'" /></div>
+                  <textarea className="mt-1 w-full border rounded px-2 py-2 min-h-[80px]" placeholder="One per line" value={(contentDraft.equipment ?? []).join('\n')} onChange={e => setContentDraft(d => ({ ...d, equipment: parseLines(e.target.value) }))} />
+                </div>
+
+                <label className="text-sm">Location <Hint text="Purpose: Recommended setting where the task works best or is most practical. Example: 'Home' / 'Quiet outdoor space' / 'Gym.'" />
+                  <input className="mt-1 w-full border rounded px-2 h-9" value={contentDraft.location ?? ''} onChange={e => setContentDraft(d => ({ ...d, location: e.target.value || undefined }))} />
+                </label>
+
+                <label className="text-sm">Intensity step <Hint text="Purpose: Indicates how challenging this task is compared to similar tasks, so the plan can progress or deload. Example: '0 = baseline, +1 = more challenging version, -1 = easier version.'" />
+                  <input type="number" className="mt-1 w-full border rounded px-2 h-9" min={1} max={5} value={contentDraft.intensity_step ?? ''} onChange={e => setContentDraft(d => ({ ...d, intensity_step: e.target.value === '' ? null : Number(e.target.value) }))} />
+                </label>
+
+                <label className="text-sm">Effort RPE <Hint text="Purpose: The target Rate of Perceived Exertion (1–10 scale) so users can gauge the effort level. Example: 'Aim for RPE 4–5: moderate effort, breathing slightly elevated but still able to talk.'" />
+                  <input type="number" className="mt-1 w-full border rounded px-2 h-9" min={1} max={10} value={contentDraft.effort_rpe ?? ''} onChange={e => setContentDraft(d => ({ ...d, effort_rpe: e.target.value === '' ? null : Number(e.target.value) }))} />
                 </label>
 
                 {error && <div className="text-xs text-red-600 sm:col-span-2">{error}</div>}
-                {!canSave && (
-                  <div className="sm:col-span-2 text-xs text-amber-700 bg-amber-50 border border-amber-200 rounded p-2">
-                    <span className="font-medium">To save, fix:</span>
-                    <span className="ml-1">
-                      {missingReasons.map((r) => (
-                        <span key={r} className="inline-block mr-2 mt-1 px-2 py-0.5 rounded-full bg-amber-100 border border-amber-200">{r}</span>
-                      ))}
-                    </span>
-                  </div>
-                )}
               </div>
             </div>
 
             <div className="xl:col-span-5">
-              <div className="sticky top-0">
+              <div className="sticky top-0 space-y-4">
                 <div className="border rounded-md">
                   <div className="p-3 border-b">
                     <div className="text-sm text-neutral-500">Preview</div>
@@ -383,8 +508,113 @@ export function TaskCreateEditModal({
                     <div><span className="text-neutral-500">Zeitgeber:</span> {(values.zeitgeber_tags ?? []).join(', ') || '—'}</div>
                     <div><span className="text-neutral-500">Circadian:</span> {(values.default_circadian_slots ?? []).join(', ') || '—'}</div>
                     <div className="pt-2 text-neutral-700 whitespace-pre-wrap">{values.description}</div>
+                    {(() => {
+                      const c = parseTaskContent(buildContentFromDraft(contentDraft))
+                      if (!c) return <div className="text-xs text-gray-500">No content to preview</div>
+                      
+                      const blocks: JSX.Element[] = []
+                      const hasWhy = !!(values.description || c.description)
+                      if (hasWhy) {
+                        blocks.push(
+                          <details key="why" className="mt-1">
+                            <summary className="text-xs font-medium text-neutral-800 cursor-pointer">Why</summary>
+                            <div className="mt-1 text-xs text-neutral-600 space-y-1">
+                              {values.description ? <p>{values.description}</p> : null}
+                              {c.description ? <p>{c.description}</p> : null}
+                            </div>
+                          </details>
+                        )
+                      }
+                      if (Array.isArray(c.how_to) && c.how_to.length) {
+                        blocks.push(
+                          <details key="howto" className="mt-1">
+                            <summary className="text-xs font-medium text-neutral-800 cursor-pointer">How to</summary>
+                            <ol className="mt-1 list-decimal list-inside text-xs text-neutral-700 space-y-1">
+                              {c.how_to.map((s, i) => (<li key={i}>{s}</li>))}
+                            </ol>
+                          </details>
+                        )
+                      }
+                      if (Array.isArray(c.cues) && c.cues.length) {
+                        blocks.push(
+                          <details key="cues" className="mt-1">
+                            <summary className="text-xs font-medium text-neutral-800 cursor-pointer">Cues</summary>
+                            <div className="mt-1 flex flex-wrap gap-1">
+                              {c.cues.map((s, i) => (<span key={i} className="px-2 py-0.5 bg-neutral-100 text-neutral-700 text-xs rounded-full border">{s}</span>))}
+                            </div>
+                          </details>
+                        )
+                      }
+                      if (Array.isArray(c.modifications) && c.modifications.length) {
+                        blocks.push(
+                          <details key="mods" className="mt-1">
+                            <summary className="text-xs font-medium text-neutral-800 cursor-pointer">Modifications</summary>
+                            <ul className="mt-1 list-disc list-inside text-xs text-neutral-700 space-y-1">
+                              {c.modifications.map((s, i) => (<li key={i}>{s}</li>))}
+                            </ul>
+                          </details>
+                        )
+                      }
+                      if (Array.isArray(c.common_mistakes) && c.common_mistakes.length) {
+                        blocks.push(
+                          <details key="mistakes" className="mt-1">
+                            <summary className="text-xs font-medium text-neutral-800 cursor-pointer">Common mistakes</summary>
+                            <ul className="mt-1 list-disc list-inside text-xs text-neutral-700 space-y-1">
+                              {c.common_mistakes.map((s, i) => (<li key={i}>{s}</li>))}
+                            </ul>
+                          </details>
+                        )
+                      }
+                      if (Array.isArray(c.media) && c.media.length) {
+                        blocks.push(
+                          <details key="media" className="mt-1">
+                            <summary className="text-xs font-medium text-neutral-800 cursor-pointer">Media</summary>
+                            <div className="mt-1 space-y-2">
+                              {c.media.map((m, i) => (
+                                <div key={i} className="space-y-1">
+                                  {m.type === 'video' ? (
+                                    <video controls playsInline className="w-full rounded border">
+                                      <source src={m.url} />
+                                    </video>
+                                  ) : (
+                                    <audio controls className="w-full">
+                                      <source src={m.url} />
+                                    </audio>
+                                  )}
+                                  {m.caption ? <div className="text-[11px] text-neutral-500">{m.caption}</div> : null}
+                                </div>
+                              ))}
+                            </div>
+                          </details>
+                        )
+                      }
+                      return <div className="space-y-1">{blocks}</div>
+                    })()}
                   </div>
                 </div>
+
+                <div className="border rounded-md">
+                  <div className="p-3 border-b">
+                    <div className="text-sm text-neutral-500">Content JSON (read-only)</div>
+                  </div>
+                  <div className="p-3">
+                    <pre className="text-xs font-mono whitespace-pre overflow-auto max-h-64 bg-neutral-50 border rounded p-2">
+                      {JSON.stringify(parseTaskContent(buildContentFromDraft(contentDraft)) || {}, null, 2)}
+                    </pre>
+                  </div>
+                </div>
+
+                {/* Validation box moved here */}
+                {!canSave && (
+                  <div className="text-xs text-amber-700 bg-amber-50 border border-amber-200 rounded p-3">
+                    <span className="font-medium">To save, fix:</span>
+                    <div className="mt-2 flex flex-wrap gap-2">
+                      {missingReasons.map((r) => (
+                        <span key={r} className="px-2 py-1 rounded-full bg-amber-100 border border-amber-200">{r}</span>
+                      ))}
+                    </div>
+                  </div>
+                )}
               </div>
             </div>
           </div>
@@ -395,7 +625,6 @@ export function TaskCreateEditModal({
 }
 
 export function TaskImportModal({ open, onClose, onImported }: { open: boolean; onClose: () => void; onImported: () => void }) {
-  const { toast } = useToast()
   const [text, setText] = useState('')
   const [pending, setPending] = useState(false)
   const [error, setError] = useState<string | null>(null)
@@ -422,17 +651,12 @@ export function TaskImportModal({ open, onClose, onImported }: { open: boolean; 
     if (!r.ok) {
       setPending(false)
       setError(String(body?.error ?? 'Request failed'))
-      toast({ title: 'Import failed', description: String(body?.error ?? 'Error'), variant: 'destructive' })
       return
     }
-    const slugs = Array.isArray(body?.data)
-      ? (body.data as { slug?: string }[]).map((x) => x.slug).filter((s): s is string => Boolean(s))
-      : []
-    toast({ title: `Imported ${slugs.length} task(s)`, description: slugs.join(', '), variant: 'success' })
     setPending(false)
     onImported()
     onClose()
-  }, [text, onImported, onClose, toast])
+  }, [text, onImported, onClose])
 
   if (!open) return null
   return (
@@ -442,8 +666,8 @@ export function TaskImportModal({ open, onClose, onImported }: { open: boolean; 
         <textarea className="w-full font-mono text-sm border rounded p-3 min-h-[260px]" value={text} onChange={e => setText(e.target.value)} />
         {error && <div className="text-xs text-red-600">{error}</div>}
         <div className="flex justify-end gap-2 pt-2">
-          <button className="px-3 py-2 border rounded" disabled={pending} onClick={onClose}>Cancel</button>
-          <button className="px-3 py-2 rounded bg-neutral-900 text-white disabled:opacity-50" disabled={pending} onClick={submit}>
+          <button className="px-3 py-1.5 border rounded" disabled={pending} onClick={onClose}>Cancel</button>
+          <button className="px-3 py-1.5 rounded bg-neutral-900 text-white disabled:opacity-50" disabled={pending} onClick={submit}>
             {pending ? 'Importing…' : 'Import'}
           </button>
         </div>

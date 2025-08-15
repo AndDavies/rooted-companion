@@ -17,6 +17,7 @@ export type TaskMin = {
   default_circadian_slots?: string[] | null
   version: number | null
   description?: string | null
+  content?: unknown
 }
 
 export default function TasksClient({ tasks }: { tasks: TaskMin[] }) {
@@ -71,6 +72,7 @@ export default function TasksClient({ tasks }: { tasks: TaskMin[] }) {
                   zeitgeber_tags: t.zeitgeber_tags ?? undefined,
                   default_circadian_slots: t.default_circadian_slots ?? undefined,
                   version: t.version ?? undefined,
+                  content: (t.content && typeof t.content === 'object') ? (t.content as Record<string, unknown>) : undefined,
                 })}>Edit</button>
               </td>
             </tr>
@@ -91,6 +93,7 @@ export default function TasksClient({ tasks }: { tasks: TaskMin[] }) {
         zeitgeber_tags: editTask.zeitgeber_tags ?? undefined,
         default_circadian_slots: editTask.default_circadian_slots ?? undefined,
         version: editTask.version ?? undefined,
+        content: (editTask.content && typeof editTask.content === 'object') ? (editTask.content as Record<string, unknown>) : undefined,
       } : undefined} onSaved={refresh} />
       <TaskImportModal open={openImport} onClose={() => setOpenImport(false)} onImported={refresh} />
     </div>

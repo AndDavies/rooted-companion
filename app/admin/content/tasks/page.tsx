@@ -11,8 +11,8 @@ export default async function TasksPage() {
   if (!isAdmin) redirect('/')
 
   const { data, error } = await supabase
-    .from('v_task_library_min')
-    .select('*')
+    .from('task_library')
+    .select('id,pillar,slug,title,description,duration_min,duration_max,intensity_tags,contraindications,evidence_refs,zeitgeber_tags,default_circadian_slots,version,content')
     .order('pillar')
 
   if (error) {

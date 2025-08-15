@@ -71,7 +71,7 @@ export default async function ProgressPage() {
   // Query recovery plan tasks for completion data
   const { data: planTaskData } = await supabase
     .from('recovery_plan_tasks')
-    .select('date, completed, action, category')
+    .select('date, completed, title, category')
     .eq('user_id', user.id)
     .gte('date', format(subDays(new Date(), 7), 'yyyy-MM-dd'))
     .order('date', { ascending: false })
