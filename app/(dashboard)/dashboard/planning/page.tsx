@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-unused-vars */
 import { createClient } from '@/utils/supabase/server';
 import type { Json } from '@/types/supabase';
 import { parseTaskContent } from '@/lib/tasks/contentSchema';
