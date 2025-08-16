@@ -197,7 +197,7 @@ export default async function PlanningPage() {
                       Your Recovery Journey Starts Here
                     </h1>
                     <p className="text-lg text-neutral-600 leading-relaxed">
-                      A simple space to review what's scheduled next and understand why each step matters.
+                      A simple space to review what&apos;s scheduled next and understand why each step matters.
                     </p>
                   </div>
                   
@@ -247,7 +247,7 @@ export default async function PlanningPage() {
                 <div className="space-y-3">
                   <h1 className="text-3xl font-bold text-neutral-900 leading-tight">{currentPlan.title}</h1>
                   <p className="text-lg text-neutral-600">
-                    A simple space to review what's scheduled next and understand why each step matters
+                    A simple space to review what&apos;s scheduled next and understand why each step matters
                   </p>
                   <div className="flex flex-wrap items-center gap-4 text-sm">
                     <span className="inline-flex items-center px-3 py-1 rounded-full bg-white/70 backdrop-blur-sm text-neutral-700 font-medium">

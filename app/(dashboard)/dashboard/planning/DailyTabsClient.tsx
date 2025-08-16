@@ -422,7 +422,7 @@ export default function DailyTabsClient({
                       <div className="bg-sage-100 rounded-lg p-4 text-center">
                         <CheckCircle2 className="w-6 h-6 text-sage-600 mx-auto mb-2" />
                         <p className="text-sm font-medium text-sage-800">
-                          You've just completed your {task.title} — your body thanks you!
+                          You&apos;ve just completed your {task.title} — your body thanks you!
                         </p>
                         <div className="flex items-center justify-center gap-4 mt-3">
                           <button className="text-sm text-sage-700 hover:text-sage-800 font-medium">
