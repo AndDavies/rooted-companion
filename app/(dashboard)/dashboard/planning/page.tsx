@@ -161,101 +161,188 @@ export default async function PlanningPage() {
   ];
 
   return (
-    <div className="w-full space-y-8">
-      {/* Page Header */}
-      <div className="flex items-start justify-between gap-4">
-        <div className="space-y-2">
-          <h1 className="text-3xl font-logo font-bold text-neutral-900">Your Recovery Plan</h1>
-          <p className="text-lg text-neutral-600 max-w-2xl">A simple space to review what&apos;s scheduled next and understand why each step matters.</p>
-        </div>
-        <Link href="/how-it-works#planning" className="inline-flex items-center gap-2 text-sm text-neutral-500 hover:text-neutral-700 transition-colors">
-          <HelpCircle className="w-4 h-4" />
-          <span className="hidden sm:inline">Learn more</span>
-        </Link>
-      </div>
+    <div className="w-full min-h-screen bg-gradient-to-br from-neutral-50 via-sage-50/30 to-sky-50/30">
+      <div className="max-w-6xl mx-auto px-4 py-8 space-y-8">
 
-      {/* No Active Plan State */}
+        {/* Page Header Row */}
+        <div className="flex items-start justify-between gap-4">
+          <div className="space-y-2">
+            <h1 className="text-3xl font-logo font-bold text-neutral-900">
+              Your Recovery Plan
+            </h1>
+            <p className="text-lg text-neutral-600 max-w-2xl">
+              A simple space to review what&apos;s scheduled next and understand why each step matters.
+            </p>
+          </div>
+          <Link 
+            href="/how-it-works#planning" 
+            className="inline-flex items-center gap-2 text-sm text-neutral-500 hover:text-neutral-700 transition-colors"
+          >
+            <HelpCircle className="w-4 h-4" />
+            <span className="hidden sm:inline">Learn more</span>
+          </Link>
+        </div>
+
+        {/* No Active Plan State */}
       {!currentPlan ? (
         <div className="space-y-8">
-          {/* Hero */}
-          <div className="grid md:grid-cols-2 gap-6 items-center">
-            <div className="order-2 md:order-1 text-center md:text-left space-y-3">
-              <h2 className="text-2xl sm:text-3xl font-logo font-bold text-neutral-900">Your Recovery Journey Starts Here</h2>
-              <p className="text-neutral-600">Choose a guided plan or pick one from our library.</p>
-              <div className="flex flex-col sm:flex-row gap-3 justify-center md:justify-start">
-                <PlanningActions isGenerateButton />
-                <Button asChild variant="outline">
-                  <Link href="/dashboard/act">Browse Plan Library</Link>
-                </Button>
+          {/* Hero Section */}
+          <div className="bg-white rounded-3xl border border-neutral-200 shadow-lg overflow-hidden">
+            <div className="bg-gradient-to-br from-sage-50 to-sky-50 p-8 lg:p-12">
+              <div className="grid lg:grid-cols-2 gap-8 items-center">
+                <div className="order-2 lg:order-1 text-center lg:text-left space-y-6">
+                  <div className="space-y-3">
+                    <h1 className="text-3xl lg:text-4xl font-bold text-neutral-900 leading-tight">
+                      Your Recovery Journey Starts Here
+                    </h1>
+                    <p className="text-lg text-neutral-600 leading-relaxed">
+                      A simple space to review what's scheduled next and understand why each step matters.
+                    </p>
+                  </div>
+                  
+                  <div className="flex flex-col sm:flex-row gap-4 justify-center lg:justify-start">
+                    <PlanningActions isGenerateButton />
+                    <Button asChild variant="outline" className="border-sage-300 hover:border-sage-400 hover:bg-sage-50">
+                      <Link href="/dashboard/act">Browse Plan Library</Link>
+                    </Button>
+                  </div>
+                  
+                  <div className="bg-sky-50 border border-sky-200 rounded-xl p-4">
+                    <div className="flex items-start gap-3">
+                      <div className="w-8 h-8 bg-sky-500 rounded-full flex items-center justify-center flex-shrink-0">
+                        <span className="text-white text-sm">ℹ️</span>
+                      </div>
+                      <div>
+                        <p className="text-sm font-medium text-sky-900 mb-1">Evidence-Based Recovery</p>
+                        <p className="text-sm text-sky-700 leading-relaxed">
+                          Recovery plans help improve HRV by up to 18% within 4 weeks — based on recent studies.
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+                
+                {/* Illustration */}
+                <div className="order-1 lg:order-2 flex items-center justify-center">
+                  <div className="relative">
+                    <div className="w-64 h-64 rounded-full bg-gradient-to-br from-sage-200 via-sky-200 to-emerald-200 opacity-60"></div>
+                    <div className="absolute inset-8 rounded-full bg-gradient-to-br from-sage-300 via-sky-300 to-emerald-300 opacity-80"></div>
+                    <div className="absolute inset-16 rounded-full bg-gradient-to-br from-sage-400 via-sky-400 to-emerald-400 flex items-center justify-center">
+                      <span className="text-4xl">🌱</span>
+                    </div>
+                  </div>
+                </div>
               </div>
-              <div className="mt-3 text-sm italic text-neutral-600 bg-neutral-50 border border-neutral-200 rounded-lg p-3">
-                <span className="mr-2">ℹ️</span>
-                Recovery plans help improve HRV by up to 18% within 4 weeks — based on recent studies.
-              </div>
-            </div>
-            {/* Illustration placeholder */}
-            <div className="order-1 md:order-2 flex items-center justify-center">
-              <div className="h-40 w-40 md:h-56 md:w-56 rounded-full bg-gradient-to-br from-green-100 to-blue-100" aria-hidden />
             </div>
           </div>
         </div>
       ) : (
         // Active Plan Present State
         <div className="space-y-8">
-          {/* Overview */}
-          <Card className="border-neutral-200 shadow-sm">
-            <CardHeader className="pb-4">
-              <div className="flex items-start justify-between gap-6">
-                <div>
-                  <CardTitle className="text-2xl text-neutral-900">{currentPlan.title}</CardTitle>
-                  <div className="text-sm text-neutral-600 mt-1">
-                    {`${dayGroups.length}-Day Recovery Plan (${formatDate(currentPlan.start_date)} – ${formatDate(currentPlan.end_date)})`}
+          {/* Modern Plan Header */}
+          <div className="bg-white rounded-2xl border border-neutral-200 shadow-lg overflow-hidden">
+            <div className="bg-gradient-to-br from-sage-50 to-sky-50 px-8 py-8">
+              <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-8">
+                <div className="space-y-3">
+                  <h1 className="text-3xl font-bold text-neutral-900 leading-tight">{currentPlan.title}</h1>
+                  <p className="text-lg text-neutral-600">
+                    A simple space to review what's scheduled next and understand why each step matters
+                  </p>
+                  <div className="flex flex-wrap items-center gap-4 text-sm">
+                    <span className="inline-flex items-center px-3 py-1 rounded-full bg-white/70 backdrop-blur-sm text-neutral-700 font-medium">
+                      {dayGroups.length}-Day Recovery Plan
+                    </span>
+                    <span className="text-neutral-600">
+                      Day {Math.min(todayIndex+1, dayGroups.length)} of {dayGroups.length}
+                    </span>
+                    <span className="text-neutral-500">
+                      {formatDate(currentPlan.start_date)} – {formatDate(currentPlan.end_date)}
+                    </span>
                   </div>
-                  <div className="text-sm text-neutral-500">Day {Math.min(todayIndex+1, dayGroups.length)} of {dayGroups.length}</div>
                 </div>
-                {/* Progress Rings */}
-                <div className="grid grid-cols-3 gap-4">
-                  {rings.map((r,idx)=> (
-                    <div key={idx} className="flex flex-col items-center">
-                      <svg width="64" height="64" viewBox="0 0 36 36" className="-rotate-90">
-                        <path d="M18 2a16 16 0 1 1 0 32 16 16 0 1 1 0-32" fill="none" stroke="#e5e7eb" strokeWidth="4" />
-                        <path d="M18 2a16 16 0 1 1 0 32" fill="none" stroke="#16a34a" strokeLinecap="round"
-                          strokeWidth="4" strokeDasharray={`${r.value}, 100`} />
-                      </svg>
-                      <div className="mt-1 text-sm font-medium text-neutral-900">{r.value}%</div>
-                      <div className="text-xs text-neutral-600">{r.label}</div>
-                    </div>
-                  ))}
+                
+                {/* Enhanced Progress Rings */}
+                <div className="flex justify-center lg:justify-end">
+                  <div className="grid grid-cols-3 gap-6">
+                    {rings.map((r, idx) => {
+                      const colors = [
+                        { bg: 'from-emerald-400 to-emerald-600', stroke: '#10b981' }, // Overall - sage green
+                        { bg: 'from-sky-400 to-sky-600', stroke: '#0ea5e9' },        // Streak - sky blue  
+                        { bg: 'from-amber-400 to-amber-600', stroke: '#f59e0b' }     // Focus - warm amber
+                      ];
+                      return (
+                        <div key={idx} className="flex flex-col items-center space-y-2">
+                          <div className="relative">
+                            <svg width="80" height="80" viewBox="0 0 36 36" className="-rotate-90">
+                              <path 
+                                d="M18 2a16 16 0 1 1 0 32 16 16 0 1 1 0-32" 
+                                fill="none" 
+                                stroke="#f1f5f9" 
+                                strokeWidth="3" 
+                              />
+                              <path 
+                                d="M18 2a16 16 0 1 1 0 32" 
+                                fill="none" 
+                                stroke={colors[idx].stroke}
+                                strokeLinecap="round"
+                                strokeWidth="3" 
+                                strokeDasharray={`${r.value}, 100`}
+                                className="transition-all duration-1000 ease-out"
+                              />
+                            </svg>
+                            <div className="absolute inset-0 flex items-center justify-center">
+                              <span className="text-xl font-bold text-neutral-900">{r.value}%</span>
+                            </div>
+                          </div>
+                          <div className="text-center">
+                            <div className="text-sm font-medium text-neutral-900">{r.label}</div>
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
                 </div>
               </div>
-            </CardHeader>
-          </Card>
+            </div>
+          </div>
 
           {/* Day Navigation + Tasks Panel */}
           <DailyTabsClient days={dayGroups} todayIndex={todayIndex} />
 
           {/* Actions Row */}
-          <div className="flex flex-col sm:flex-row gap-3">
-            <Button variant="outline">View Full Schedule</Button>
-            <PlanningActions isRegenerateButton />
-            <Button asChild variant="outline">
-              <Link href="/dashboard/act">Browse Plan Library</Link>
-            </Button>
+          <div className="bg-white rounded-2xl border border-neutral-200 shadow-sm p-6">
+            <div className="flex flex-col sm:flex-row gap-4">
+              <Button variant="outline" className="flex-1 border-neutral-300 hover:border-sage-400 hover:bg-sage-50">
+                View Full Schedule
+              </Button>
+              <PlanningActions isRegenerateButton />
+              <Button asChild variant="outline" className="flex-1 border-neutral-300 hover:border-sage-400 hover:bg-sage-50">
+                <Link href="/dashboard/act">Browse Plan Library</Link>
+              </Button>
+            </div>
           </div>
 
           {/* Insights Strip */}
-          <Card className="bg-neutral-50 border-neutral-200">
-            <CardContent className="py-4 text-sm text-neutral-700 flex items-center gap-2">
-              <span>🌿</span>
-              {hrvAvg ? (
-                <span>Your HRV average over the last week is {hrvAvg}. Keep the momentum!</span>
-              ) : (
-                <span>Connect a wearable to see recovery insights alongside your plan.</span>
-              )}
-            </CardContent>
-          </Card>
+          <div className="bg-gradient-to-r from-sage-50 to-sky-50 rounded-2xl border border-sage-200 shadow-sm p-6">
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 bg-sage-500 rounded-full flex items-center justify-center">
+                <span className="text-lg">🌿</span>
+              </div>
+              <div className="flex-1">
+                <h3 className="text-sm font-semibold text-sage-900 mb-1">Recovery Insights</h3>
+                <p className="text-sm text-sage-700">
+                  {hrvAvg ? (
+                    <>Your HRV average over the last week is <span className="font-medium">{hrvAvg}</span>. Keep the momentum!</>
+                  ) : (
+                    <>Connect a wearable to see personalized recovery insights alongside your plan.</>
+                  )}
+                </p>
+              </div>
+            </div>
+          </div>
         </div>
       )}
+      </div>
     </div>
   );
 }

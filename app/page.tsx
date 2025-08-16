@@ -7,28 +7,37 @@ import { Button } from "@/components/ui/button"
 import dynamic from "next/dynamic"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import {
-  Activity,
+  Menu,
+  X,
+  HeartPulse,
+  ListChecks,
+  BarChart3,
+  Bot,
+  Users,
   Wind,
   Moon,
   Utensils,
   Move,
   Target,
   Sparkles,
-  HeartPulse,
-  ListChecks,
-  BarChart3,
-  Bot,
-  Flame,
-  Users,
-  Handshake,
-  Menu,
-  X,
 } from "lucide-react"
+import Script from "next/script"
+
 
 const WaitlistLauncher = dynamic(() => import("@/components/waitlist/WaitlistLauncher"), { ssr: false })
 
 export default function LandingPage() {
   const [mobileOpen, setMobileOpen] = useState(false)
+  const [scrolled, setScrolled] = useState(false)
+
+  useEffect(() => {
+    const handleScroll = () => {
+      setScrolled(window.scrollY > 10)
+    }
+    window.addEventListener('scroll', handleScroll)
+    handleScroll()
+    return () => window.removeEventListener('scroll', handleScroll)
+  }, [])
 
   useEffect(() => {
     // Smooth anchor scrolling
@@ -66,10 +75,87 @@ export default function LandingPage() {
     return () => { document.body.style.overflow = ''; };
   }, [mobileOpen]);
 
+  const orgSchema = {
+    "@context": "https://schema.org",
+    "@type": "Organization",
+    name: "ROOTED Companion",
+    url: "https://app.therootedway.co/",
+    logo: "https://app.therootedway.co/images/rooted_logo_circle.png",
+  }
+
+  const webSiteSchema = {
+    "@context": "https://schema.org",
+    "@type": "WebSite",
+    name: "ROOTED Companion",
+    url: "https://app.therootedway.co/",
+    potentialAction: {
+      "@type": "SearchAction",
+      target: "https://app.therootedway.co/search?q={query}",
+      "query-input": "required name=query",
+    },
+  }
+
+  const faqSchema = {
+    "@context": "https://schema.org",
+    "@type": "FAQPage",
+    mainEntity: [
+      {
+        "@type": "Question",
+        name: "What is the Daily Pulse?",
+        acceptedAnswer: {
+          "@type": "Answer",
+          text:
+            "A lightweight, joy-forward suggestion you can act on today—often 2–5 minutes—to spark embodied connection and spread goodwill. It works with your goals and feelings, and can use data when available.",
+        },
+      },
+      {
+        "@type": "Question",
+        name: "What is a Program of Action?",
+        acceptedAnswer: {
+          "@type": "Answer",
+          text:
+            "A guided plan with daily tasks (2–20 minutes each) across the Six Pillars. Programs build sustainable habits over weeks, complementing the Daily Pulse.",
+        },
+      },
+      {
+        "@type": "Question",
+        name: "Do I need a wearable?",
+        acceptedAnswer: {
+          "@type": "Answer",
+          text:
+            "Wearable data is optional but helpful. It further personalizes your plan across the Six Pillars, but ROOTED still guides you based on your goals and feelings if no device is connected.",
+        },
+      },
+      {
+        "@type": "Question",
+        name: "What progress can I track?",
+        acceptedAnswer: {
+          "@type": "Answer",
+          text:
+            "Completion, trends across pillars, and streaks to reinforce momentum without pressure.",
+        },
+      },
+      {
+        "@type": "Question",
+        name: "Is there human coaching?",
+        acceptedAnswer: {
+          "@type": "Answer",
+          text:
+            "Yes, you can integrate human coaching for accountability and depth alongside AI guidance.",
+        },
+      },
+    ],
+  }
+
   return (
     <div className="min-h-screen bg-white text-neutral-900 flex flex-col">
+      <Script id="ld-org" type="application/ld+json">{JSON.stringify(orgSchema)}</Script>
+      <Script id="ld-website" type="application/ld+json">{JSON.stringify(webSiteSchema)}</Script>
+      <Script id="ld-faq" type="application/ld+json">{JSON.stringify(faqSchema)}</Script>
       {/* Header */}
-      <header className="flex justify-between items-center px-6 py-4 border-b border-neutral-200">
+      <header
+        className={`fixed inset-x-0 top-0 z-50 flex justify-between items-center px-6 py-4 transition-[background-color,backdrop-filter,border-color] duration-500 ease-out ${scrolled ? "bg-white border-b border-neutral-200" : "bg-transparent border-b border-transparent"}`}
+      >
         <Link href="/" className="flex items-center gap-2">
           <Image
             src="/images/rooted_logo_circle.png"
@@ -88,20 +174,20 @@ export default function LandingPage() {
           <a href="#how-it-works" className="text-sm text-neutral-600 hover:text-neutral-900 transition-colors">How it works</a>
           <a href="#pillars" className="text-sm text-neutral-600 hover:text-neutral-900 transition-colors">Pillars</a>
           <a href="#faq" className="text-sm text-neutral-600 hover:text-neutral-900 transition-colors">FAQ</a>
-                      <div className="flex items-center gap-3">
-              <button
-                type="button"
-                onClick={() => window.dispatchEvent(new Event("open-waitlist"))}
-                className="inline-flex items-center justify-center rounded-full px-5 py-2 text-sm bg-[#e0e111] text-neutral-800 hover:bg-[#d4d50f] h-10"
-              >
-                Join the Waitlist
-              </button>
-              <Link href="/login">
-                <Button variant="outline" size="sm" className="rounded-full px-5 h-10">
-                  Log in
-                </Button>
-              </Link>
-            </div>
+          <div className="flex items-center gap-3">
+            <button
+              type="button"
+              onClick={() => window.dispatchEvent(new Event("open-waitlist"))}
+              className="inline-flex items-center justify-center rounded-full h-12 px-8 bg-[#e0e111] text-neutral-800 hover:bg-[#d4d50f] text-base font-medium"
+            >
+              Join the Waitlist
+            </button>
+            <Link href="/login">
+              <Button variant="outline" size="lg" className="rounded-full h-12 px-8 text-base">
+                Log in
+              </Button>
+            </Link>
+          </div>
         </nav>
 
         {/* Mobile hamburger */}
@@ -125,73 +211,61 @@ export default function LandingPage() {
               <a href="#how-it-works" className="text-sm text-neutral-700 hover:text-neutral-900 transition-colors">How it works</a>
               <a href="#pillars" className="text-sm text-neutral-700 hover:text-neutral-900 transition-colors">Pillars</a>
               <a href="#faq" className="text-sm text-neutral-700 hover:text-neutral-900 transition-colors">FAQ</a>
-            <div className="pt-2 flex items-center gap-3">
-              <button
-                type="button"
-                onClick={() => { window.dispatchEvent(new Event("open-waitlist")); setMobileOpen(false); }}
-                className="flex-1 rounded-full bg-[#e0e111] text-neutral-800 hover:bg-[#d4d50f] px-4 py-2 h-10"
-              >
-                Join the Waitlist
-              </button>
-              <Link href="/login" className="flex-1">
-                <Button variant="outline" className="w-full rounded-full h-10">
-                  Log in
-                </Button>
-              </Link>
-            </div>
-          </nav>
-        </div>
-      )}
+              <div className="pt-2 flex items-center gap-3">
+                <button
+                  type="button"
+                  onClick={() => { window.dispatchEvent(new Event("open-waitlist")); setMobileOpen(false); }}
+                  className="flex-1 rounded-full bg-[#e0e111] text-neutral-800 hover:bg-[#d4d50f] h-12 px-8 text-base"
+                >
+                  Join the Waitlist
+                </button>
+                <Link href="/login" className="flex-1">
+                  <Button variant="outline" className="w-full rounded-full h-12 px-8 text-base">
+                    Log in
+                  </Button>
+                </Link>
+              </div>
+            </nav>
+          </div>
+        )}
 
       {/* Hero Section */}
       <main className="flex-1">
-        <section className="relative w-full bg-[#fbf3ec] min-h-[70svh] md:min-h-0">
-          {/* Background image shown on md+ only */}
-          <div className="hidden md:block relative w-full aspect-[1920/1080]">
-            <Image
-              src="/images/rooted_hero_bg.png"
-              alt="ROOTED hero"
-              fill
-              priority
-              className="object-cover"
-            />
-          </div>
-
-          {/* Gradient scrim for readability on md+ */}
-          <div className="hidden md:block absolute inset-0 bg-gradient-to-r from-[#fbf3ec]/90 via-[#fbf3ec]/40 to-transparent" />
-
-          {/* Copy overlay centered within left half */}
-          <div className="md:absolute md:inset-0 z-10">
-            <div className="container-custom h-full">
-              <div className="h-full grid md:grid-cols-12">
-                <div className="col-span-12 md:col-span-6 flex items-center md:items-center justify-center md:justify-center text-center md:text-left px-5 sm:px-6 md:px-0 py-12 md:py-0">
-                  <div className="space-y-4 sm:space-y-5 md:space-y-6 max-w-[22rem] sm:max-w-xl md:max-w-2xl">
-                    <h2 className="text-[28px] sm:text-4xl md:text-5xl lg:text-6xl xl:text-7xl font-logo font-bold leading-snug text-neutral-900">
-                      Out of the mind.
-                      <br />
-                      Into the body.
-                    </h2>
-                    <p className="text-pretty text-base sm:text-lg md:text-xl text-neutral-700 leading-relaxed">
-                    A personalised recovery system for high performers and teams. Reduce stress and burnout with data‑driven daily actions.                    </p>
-                    <div className="flex flex-col sm:flex-row gap-2 sm:gap-4 justify-center md:justify-start">
-                      <button
-                        type="button"
-                        onClick={() => window.dispatchEvent(new Event("open-waitlist"))}
-                        className="inline-flex items-center justify-center rounded-full px-5 py-3 text-base sm:px-8 sm:py-4 sm:text-lg bg-[#e0e111] text-neutral-800 hover:bg-[#d4d50f] sm:min-w-[160px] h-12 sm:h-14"
-                      >
-                        Join Waitlist
-                      </button>
-                      <a href="#how-it-works" className="inline-flex">
-                        <Button variant="outline" size="lg" className="w-full sm:w-auto px-5 py-3 text-base sm:px-8 sm:py-4 sm:text-lg rounded-full sm:min-w-[160px] h-12 sm:h-14">
-                          How It Works
-                        </Button>
-                      </a>
-                    </div>
-                  </div>
-                </div>
-                {/* Right half left empty for background graphic */}
-                <div className="hidden md:block md:col-span-6" />
-              </div>
+        <section className="relative w-full h-screen flex items-center">
+          <video
+            className="absolute inset-0 w-full h-full object-cover"
+            src="/images/rooted_hero_bg.mp4"
+            poster="/images/rooted_hero_bg.png"
+            autoPlay
+            loop
+            muted
+            playsInline
+            preload="auto"
+            aria-hidden="true"
+            onError={(e) => console.error('Video failed to load:', e)}
+          />
+          {/* Light scrim for text readability */}
+          <div className="absolute inset-0 bg-gradient-to-b from-transparent via-white/25 to-white/70" />
+          <div className="relative container-custom text-center space-y-6 py-24">
+            <h1 className="text-4xl md:text-6xl font-logo font-bold text-gray-800 antialiased">
+              Small steps.<br /> Profound change.
+            </h1>
+            <p className="text-lg md:text-xl text-neutral-700 max-w-2xl mx-auto">
+              Short, guided tasks across the Six Pillars to shift your day, your week, your life.<br /> Bucket‑list retreats where it all comes alive.
+            </p>
+            <div className="flex flex-col sm:flex-row gap-4 justify-center">
+              <button
+                type="button"
+                onClick={() => window.dispatchEvent(new Event("open-waitlist"))}
+                className="w-full sm:w-auto inline-flex items-center justify-center rounded-full h-12 px-8 bg-[#e0e111] text-neutral-800 hover:bg-[#d4d50f] text-base font-medium"
+              >
+                Join the Waitlist
+              </button>
+              <a href="#how-it-works" className="w-full sm:w-auto inline-flex">
+                <Button variant="outline" size="lg" className="w-full rounded-full h-12 px-8 text-base">
+                  How It Works
+                </Button>
+              </a>
             </div>
           </div>
         </section>
@@ -274,67 +348,63 @@ export default function LandingPage() {
         </section>
 
         {/* How it works - Moved here second */}
-        <section id="how-it-works" className="container-custom py-16 md:py-24 scroll-mt-24">
+        <section id="how-it-works" className="container-custom py-16 md:py-24 scroll-mt-24 bg-white">
           <div className="text-center mb-16">
             <h3 className="text-3xl md:text-4xl font-logo font-bold text-neutral-900 mb-4">How ROOTED Companion works</h3>
             <p className="text-lg text-neutral-600 max-w-3xl mx-auto">
-              A simple daily rhythm blends wearable signals, behavioral science, and the Rooted Way principles.
+              A simple daily rhythm blends your goals and reflections with behavioral science and (optionally) wearable signals. Data isn’t required—when present, it further personalizes your plan across the Six Pillars.
             </p>
           </div>
 
           <div className="grid md:grid-cols-3 gap-8">
-            <Card className="reveal opacity-0 translate-y-4 transition-all duration-700 border-neutral-200">
+            <Card className="reveal opacity-0 translate-y-4 transition-all duration-700 border-none shadow-none">
               <CardHeader>
-                <div className="w-12 h-12 bg-rose-100 rounded-lg flex items-center justify-center mb-3">
+                <div className="w-12 h-12 bg-rose-100 rounded-lg flex items-center justify-center mb-4">
                   <HeartPulse className="w-6 h-6 text-rose-700" />
                 </div>
                 <CardTitle className="font-logo">Daily Pulse</CardTitle>
                 <CardDescription>
-                   A morning pulse reads readiness and recovery from your wearable to set your day&#39;s tone.
+                  Your promised daily nudge: a simple, joy‑forward action (2–5 minutes) drawn from the Six Pillars to spark embodied connection and goodwill.
                 </CardDescription>
               </CardHeader>
             </Card>
-
-            <Card className="reveal opacity-0 translate-y-4 transition-all duration-700 border-neutral-200">
+            <Card className="reveal opacity-0 translate-y-4 transition-all duration-700 border-none shadow-none">
               <CardHeader>
-                <div className="w-12 h-12 bg-teal-100 rounded-lg flex items-center justify-center mb-3">
+                <div className="w-12 h-12 bg-teal-100 rounded-lg flex items-center justify-center mb-4">
                   <ListChecks className="w-6 h-6 text-teal-700" />
                 </div>
-                <CardTitle className="font-logo">Plan Generation</CardTitle>
+                <CardTitle className="font-logo">Program of Action</CardTitle>
                 <CardDescription>
-                  Generate a simple, personalized plan mapped to the Six Pillars—actionable in minutes.
+                  A plan created for you based on your goals and where you are today. Wearable data is optional—and when present, it further personalizes your plan across the Six Pillars.
                 </CardDescription>
               </CardHeader>
             </Card>
-
-            <Card className="reveal opacity-0 translate-y-4 transition-all duration-700 border-neutral-200">
+            <Card className="reveal opacity-0 translate-y-4 transition-all duration-700 border-none shadow-none">
               <CardHeader>
-                <div className="w-12 h-12 bg-sky-100 rounded-lg flex items-center justify-center mb-3">
+                <div className="w-12 h-12 bg-sky-100 rounded-lg flex items-center justify-center mb-4">
                   <BarChart3 className="w-6 h-6 text-sky-700" />
                 </div>
                 <CardTitle className="font-logo">Progress</CardTitle>
                 <CardDescription>
-                  Track your completion, trends, and capacity building over time.
+                  See completion and trends that matter. Grow together and collect experiences—bucket‑list trips, not streaks or minutes on an app.
                 </CardDescription>
               </CardHeader>
             </Card>
-
-            <Card className="reveal opacity-0 translate-y-4 transition-all duration-700 border-neutral-200">
+            <Card className="reveal opacity-0 translate-y-4 transition-all duration-700 border-none shadow-none">
               <CardHeader>
-                <div className="w-12 h-12 bg-violet-100 rounded-lg flex items-center justify-center mb-3">
+                <div className="w-12 h-12 bg-violet-100 rounded-lg flex items-center justify-center mb-4">
                   <Bot className="w-6 h-6 text-violet-700" />
                 </div>
                 <CardTitle className="font-logo">AI Coaching</CardTitle>
                 <CardDescription>
-                  Coaching trained on the Rooted Way principles helps you choose aligned practices—science and soul.
+                  Coaching trained on the Rooted Way principles helps you choose aligned practices—evidence‑based, human‑centered.
                 </CardDescription>
               </CardHeader>
             </Card>
-
-            <Card className="reveal opacity-0 translate-y-4 transition-all duration-700 border-neutral-200">
+            <Card className="reveal opacity-0 translate-y-4 transition-all duration-700 border-none shadow-none">
               <CardHeader>
-                <div className="w-12 h-12 bg-amber-100 rounded-lg flex items-center justify-center mb-3">
-                  <Flame className="w-6 h-6 text-amber-700" />
+                <div className="w-12 h-12 bg-amber-100 rounded-lg flex items-center justify-center mb-4">
+                  <BarChart3 className="w-6 h-6 text-amber-700" />
                 </div>
                 <CardTitle className="font-logo">Streaks</CardTitle>
                 <CardDescription>
@@ -342,10 +412,9 @@ export default function LandingPage() {
                 </CardDescription>
               </CardHeader>
             </Card>
-
-            <Card className="reveal opacity-0 translate-y-4 transition-all duration-700 border-neutral-200">
+            <Card className="reveal opacity-0 translate-y-4 transition-all duration-700 border-none shadow-none">
               <CardHeader>
-                <div className="w-12 h-12 bg-neutral-100 rounded-lg flex items-center justify-center mb-3">
+                <div className="w-12 h-12 bg-neutral-100 rounded-lg flex items-center justify-center mb-4">
                   <Users className="w-6 h-6 text-neutral-700" />
                 </div>
                 <CardTitle className="font-logo">Peer & Human Support</CardTitle>
@@ -358,19 +427,19 @@ export default function LandingPage() {
         </section>
 
         {/* Pillars Section - Moved here third */}
-        <section id="pillars" className="container-custom py-16 md:py-24 bg-neutral-50 scroll-mt-24">
+        <section id="pillars" className="container-custom py-16 md:py-24 bg-white scroll-mt-24">
           <div className="text-center mb-16">
             <h3 className="text-3xl md:text-4xl font-logo font-bold text-neutral-900 mb-4">The Six Pillars of the Rooted Way</h3>
             <p className="text-lg text-neutral-600 max-w-2xl mx-auto">
-              Practices that return you to presence, power, and embodied clarity.
+              Practices that return you to presence and embodied clarity—holistic action across Breath, Sleep, Food, Movement, Focus, and Joy. Short in practice, profound in effect.
             </p>
           </div>
 
           <div className="grid md:grid-cols-3 gap-8">
             {/* 1. Breath */}
-            <Card className="reveal opacity-0 translate-y-4 transition-all duration-700 border-neutral-200 hover:shadow-md transition-all duration-200">
+            <Card className="reveal opacity-0 translate-y-4 transition-all duration-700 border-none shadow-none">
               <CardHeader>
-                <div className="w-12 h-12 bg-blue-100 rounded-lg flex items-center justify-center mb-3">
+                <div className="w-12 h-12 bg-blue-100 rounded-lg flex items-center justify-center mb-4">
                   <Wind className="w-6 h-6 text-blue-700" />
                 </div>
                 <CardTitle className="text-xl font-logo">Breath: Our first teacher</CardTitle>
@@ -382,11 +451,10 @@ export default function LandingPage() {
                 <p className="text-sm text-neutral-700"><span className="font-medium">Weekly task:</span> Three threshold breaths at daily transitions.</p>
               </CardContent>
             </Card>
-
             {/* 2. Sleep */}
-            <Card className="reveal opacity-0 translate-y-4 transition-all duration-700 border-neutral-200 hover:shadow-md transition-all duration-200">
+            <Card className="reveal opacity-0 translate-y-4 transition-all duration-700 border-none shadow-none">
               <CardHeader>
-                <div className="w-12 h-12 bg-indigo-100 rounded-lg flex items-center justify-center mb-3">
+                <div className="w-12 h-12 bg-indigo-100 rounded-lg flex items-center justify-center mb-4">
                   <Moon className="w-6 h-6 text-indigo-700" />
                 </div>
                 <CardTitle className="text-xl font-logo">Sleep: A deep way of meditation</CardTitle>
@@ -398,11 +466,10 @@ export default function LandingPage() {
                 <p className="text-sm text-neutral-700"><span className="font-medium">Weekly task:</span> One-hour digital sunset before bed.</p>
               </CardContent>
             </Card>
-
             {/* 3. Food */}
-            <Card className="reveal opacity-0 translate-y-4 transition-all duration-700 border-neutral-200 hover:shadow-md transition-all duration-200">
+            <Card className="reveal opacity-0 translate-y-4 transition-all duration-700 border-none shadow-none">
               <CardHeader>
-                <div className="w-12 h-12 bg-emerald-100 rounded-lg flex items-center justify-center mb-3">
+                <div className="w-12 h-12 bg-emerald-100 rounded-lg flex items-center justify-center mb-4">
                   <Utensils className="w-6 h-6 text-emerald-700" />
                 </div>
                 <CardTitle className="text-xl font-logo">Food: Living information</CardTitle>
@@ -414,11 +481,10 @@ export default function LandingPage() {
                 <p className="text-sm text-neutral-700"><span className="font-medium">Weekly task:</span> One distraction‑free listening meal.</p>
               </CardContent>
             </Card>
-
             {/* 4. Movement */}
-            <Card className="reveal opacity-0 translate-y-4 transition-all duration-700 border-neutral-200 hover:shadow-md transition-all duration-200">
+            <Card className="reveal opacity-0 translate-y-4 transition-all duration-700 border-none shadow-none">
               <CardHeader>
-                <div className="w-12 h-12 bg-orange-100 rounded-lg flex items-center justify-center mb-3">
+                <div className="w-12 h-12 bg-orange-100 rounded-lg flex items-center justify-center mb-4">
                   <Move className="w-6 h-6 text-orange-700" />
                 </div>
                 <CardTitle className="text-xl font-logo">Movement: Memory in motion</CardTitle>
@@ -430,11 +496,10 @@ export default function LandingPage() {
                 <p className="text-sm text-neutral-700"><span className="font-medium">Weekly task:</span> 10‑minute silent flow, daily.</p>
               </CardContent>
             </Card>
-
             {/* 5. Focus */}
-            <Card className="reveal opacity-0 translate-y-4 transition-all duration-700 border-neutral-200 hover:shadow-md transition-all duration-200">
+            <Card className="reveal opacity-0 translate-y-4 transition-all duration-700 border-none shadow-none">
               <CardHeader>
-                <div className="w-12 h-12 bg-purple-100 rounded-lg flex items-center justify-center mb-3">
+                <div className="w-12 h-12 bg-purple-100 rounded-lg flex items-center justify-center mb-4">
                   <Target className="w-6 h-6 text-purple-700" />
                 </div>
                 <CardTitle className="text-xl font-logo">Focus: Mind as garden</CardTitle>
@@ -446,11 +511,10 @@ export default function LandingPage() {
                 <p className="text-sm text-neutral-700"><span className="font-medium">Weekly task:</span> Do one thing fully, each day.</p>
               </CardContent>
             </Card>
-
             {/* 6. Joy */}
-            <Card className="reveal opacity-0 translate-y-4 transition-all duration-700 border-neutral-200 hover:shadow-md transition-all duration-200">
+            <Card className="reveal opacity-0 translate-y-4 transition-all duration-700 border-none shadow-none">
               <CardHeader>
-                <div className="w-12 h-12 bg-amber-100 rounded-lg flex items-center justify-center mb-3">
+                <div className="w-12 h-12 bg-amber-100 rounded-lg flex items-center justify-center mb-4">
                   <Sparkles className="w-6 h-6 text-amber-700" />
                 </div>
                 <CardTitle className="text-xl font-logo">Joy: The forgotten fuel</CardTitle>
@@ -478,7 +542,7 @@ export default function LandingPage() {
               {/* 84% consistent habit */}
               <div className="px-6 md:px-12 lg:px-20 xl:px-28 2xl:px-36 border-t border-neutral-300 py-10 md:py-12 text-center reveal opacity-0 translate-y-4 transition-all duration-700 will-change-transform">
                 <div className="font-logo text-4xl sm:text-6xl md:text-7xl leading-tight tracking-tight text-neutral-900">84%</div>
-                <p className="mt-4 text-lg md:text-xl text-neutral-700">build a consistent mindfulness habit by week 8.</p>
+                <p className="mt-4 text-lg md:text-xl text-neutral-700">build a consistent Six‑Pillar wellness habit by week 8.</p>
               </div>
               {/* 51% less productivity impairment */}
               <div className="px-6 md:px-12 lg:px-20 xl:px-28 2xl:px-36 border-t border-neutral-300 py-10 md:py-12 text-center reveal opacity-0 translate-y-4 transition-all duration-700 will-change-transform">
@@ -504,19 +568,15 @@ export default function LandingPage() {
         </section>
 
         {/* Why ROOTED is different */}
-        <section id="difference" className="relative w-full overflow-hidden bg-neutral-50 scroll-mt-24">
+        <section id="difference" className="relative w-full overflow-hidden bg-white scroll-mt-24">
           {/* Animated accent line */}
           <div className="diff-accent absolute inset-x-0 top-0 h-[2px]" />
-
-          {/* Soft ambient glows (no outlines) */}
-          <div aria-hidden className="pointer-events-none absolute -top-24 -left-16 h-72 w-72 rounded-full blur-3xl" style={{ background: "radial-gradient(closest-side, rgba(229,233,0,.25), transparent 70%)" }} />
-          <div aria-hidden className="pointer-events-none absolute top-16 -right-10 h-80 w-80 rounded-full blur-3xl" style={{ background: "radial-gradient(closest-side, rgba(165,165,248,.25), transparent 70%)" }} />
-          <div aria-hidden className="pointer-events-none absolute -bottom-20 left-1/3 h-72 w-72 rounded-full blur-3xl" style={{ background: "radial-gradient(closest-side, rgba(248,120,205,.22), transparent 70%)" }} />
-
           <div className="container-custom py-16 md:py-24">
             <div className="text-center mb-12 reveal opacity-0 translate-y-4 transition-all duration-700">
-              <h3 className="text-3xl md:text-4xl font-logo font-bold text-neutral-900 mb-4">Whole‑person recovery. Not another meditation app.</h3>
-              <p className="text-lg text-neutral-600 max-w-3xl mx-auto">Personalised from your wearable signals and Wellness Profile, then mapped to complete programs across the Six Pillars: Breath, Sleep, Food, Movement, Focus, and Joy.</p>
+              <h3 className="text-3xl md:text-4xl font-logo font-bold text-neutral-900 mb-4">Whole‑person recovery. Not another mindfulness app.</h3>
+              <p className="text-lg text-neutral-600 max-w-3xl mx-auto">
+                Holistic by design and grounded in the Six Pillars. ROOTED is built to inspire action and bring joy—to your life, the people around you, and the wider world. Grow together and collect experiences through bucket‑list trips—not streaks or minutes on an app.
+              </p>
             </div>
 
             <div className="grid gap-6 md:grid-cols-12">
@@ -560,7 +620,7 @@ export default function LandingPage() {
 
               {/* Soft Comparison (no pot-shots) */}
               <div className="md:col-span-5">
-                <div className="compare-card relative rounded-2xl bg-white/80 backdrop-blur p-6 md:p-8 shadow-[0_20px_40px_rgba(0,0,0,0.06)] reveal opacity-0 translate-y-4 transition-all duration-700">
+                <div className="compare-card relative rounded-2xl bg-white/80 backdrop-blur p-6 md:p-8 shadow-none reveal opacity-0 translate-y-4 transition-all duration-700">
                   <div className="grid grid-cols-2 gap-4 text-sm">
                     <div>
                       <div className="text-neutral-500 uppercase tracking-wide mb-2">Most apps</div>
@@ -579,10 +639,8 @@ export default function LandingPage() {
                       </ul>
                     </div>
                   </div>
-
                   {/* Decorative gradient divider */}
                   <div className="mt-6 h-[2px] w-full rounded-full" style={{ background: "linear-gradient(90deg,#e5e900,#a5a5f8,#f878cd)" }} />
-
                   <p className="mt-6 text-neutral-700">We build a holistic, adaptive plan across all six pillars—so change sticks.</p>
                 </div>
               </div>
@@ -590,13 +648,13 @@ export default function LandingPage() {
 
             {/* Quotes / Trust hooks */}
             <div className="mt-10 grid gap-4 md:grid-cols-3">
-              <div className="reveal opacity-0 translate-y-4 transition-all duration-700 rounded-xl border border-neutral-200 bg-white/80 backdrop-blur p-5 text-center shadow-sm hover:shadow-md"> 
+              <div className="reveal opacity-0 translate-y-4 transition-all duration-700 rounded-xl bg-white/80 backdrop-blur p-5 text-center shadow-sm hover:shadow-md">
                 <p className="text-neutral-800 font-medium">“One small action a day can restore your balance.”</p>
               </div>
-              <div className="reveal opacity-0 translate-y-4 transition-all duration-700 rounded-xl border border-neutral-200 bg-white/80 backdrop-blur p-5 text-center shadow-sm hover:shadow-md"> 
+              <div className="reveal opacity-0 translate-y-4 transition-all duration-700 rounded-xl bg-white/80 backdrop-blur p-5 text-center shadow-sm hover:shadow-md">
                 <p className="text-neutral-800 font-medium">“Your heart is telling you something. We help you listen.”</p>
               </div>
-              <div className="reveal opacity-0 translate-y-4 transition-all duration-700 rounded-xl border border-neutral-200 bg-white/80 backdrop-blur p-5 text-center shadow-sm hover:shadow-md"> 
+              <div className="reveal opacity-0 translate-y-4 transition-all duration-700 rounded-xl bg-white/80 backdrop-blur p-5 text-center shadow-sm hover:shadow-md">
                 <p className="text-neutral-800 font-medium">“Recovery, not tracking. Support, not noise.”</p>
               </div>
             </div>
@@ -614,7 +672,7 @@ export default function LandingPage() {
         </section>
 
         {/* CTA Section - update buttons here too */}
-        <section className="container-custom py-16 md:py-24">
+        <section className="container-custom py-16 md:py-24 bg-white">
           <div className="text-center space-y-6">
             <h3 className="text-3xl md:text-4xl font-logo font-bold text-neutral-900">
               Ready to Begin?
@@ -624,12 +682,12 @@ export default function LandingPage() {
             </p>
             <div className="flex flex-col sm:flex-row gap-4 justify-center">
               <Link href="/signup">
-                <Button size="lg" className="px-8 py-3 text-base rounded-full bg-[#e0e111] text-neutral-700 hover:bg-[#d4d50f] h-14">
+                <Button size="lg" className="rounded-full h-12 px-8 text-base bg-[#e0e111] text-neutral-800 hover:bg-[#d4d50f]">
                   Start Free
                 </Button>
               </Link>
               <a href="#how-it-works">
-                <Button variant="outline" size="lg" className="px-8 py-3 text-base rounded-full h-14">
+                <Button variant="outline" size="lg" className="rounded-full h-12 px-8 text-base">
                   See How it Works
                 </Button>
               </a>
@@ -638,7 +696,7 @@ export default function LandingPage() {
         </section>
 
         {/* FAQ */}
-        <section id="faq" className="container-custom py-16 md:py-24 bg-neutral-50 scroll-mt-24">
+        <section id="faq" className="container-custom py-16 md:py-24 bg-white scroll-mt-24">
           <div className="text-center mb-12">
             <h3 className="text-3xl md:text-4xl font-logo font-bold text-neutral-900 mb-4">FAQ</h3>
             <p className="text-lg text-neutral-600 max-w-2xl mx-auto">Answers grounded in how ROOTED Companion works today.</p>
@@ -648,57 +706,46 @@ export default function LandingPage() {
             <details className="group rounded-lg border border-neutral-200 bg-white p-5 [&_summary::-webkit-details-marker]:hidden">
               <summary className="flex cursor-pointer list-none items-center justify-between gap-4">
                 <span className="font-medium text-neutral-900">What is the Daily Pulse?</span>
-                <Activity className="h-5 w-5 text-neutral-400 transition-transform group-open:rotate-180" />
               </summary>
               <div className="mt-3 text-neutral-600">
-                A lightweight morning check that reads readiness and recovery indicators and offers a right‑sized plan for the day.
+                A lightweight, joy-forward suggestion you can act on today—often 2–5 minutes—to spark embodied connection and spread goodwill. It works with your goals and feelings, and can use data when available.
               </div>
             </details>
-
             <details className="group rounded-lg border border-neutral-200 bg-white p-5 [&_summary::-webkit-details-marker]:hidden">
               <summary className="flex cursor-pointer list-none items-center justify-between gap-4">
-                <span className="font-medium text-neutral-900">How are plans generated?</span>
-                <ListChecks className="h-5 w-5 text-neutral-400 transition-transform group-open:rotate-180" />
+                <span className="font-medium text-neutral-900">What is a Program of Action?</span>
               </summary>
               <div className="mt-3 text-neutral-600">
-                Plans combine your wearable signals with the Six Pillars and are refined by AI coaching trained on Rooted Way principles.
+                A guided plan with daily tasks (2–20 minutes each) across the Six Pillars. Programs build sustainable habits over weeks, complementing the Daily Pulse.
               </div>
             </details>
-
             <details className="group rounded-lg border border-neutral-200 bg-white p-5 [&_summary::-webkit-details-marker]:hidden">
               <summary className="flex cursor-pointer list-none items-center justify-between gap-4">
                 <span className="font-medium text-neutral-900">Do I need a wearable?</span>
-                <HeartPulse className="h-5 w-5 text-neutral-400 transition-transform group-open:rotate-180" />
               </summary>
               <div className="mt-3 text-neutral-600">
-                Wearables help personalize your plan. If none is connected, ROOTED prioritizes your onboarding focus to keep you moving.
+                Wearable data is optional but helpful. It further personalizes your plan across the Six Pillars, but ROOTED still guides you based on your goals and feelings if no device is connected.
               </div>
             </details>
-
             <details className="group rounded-lg border border-neutral-200 bg-white p-5 [&_summary::-webkit-details-marker]:hidden">
               <summary className="flex cursor-pointer list-none items-center justify-between gap-4">
                 <span className="font-medium text-neutral-900">What progress can I track?</span>
-                <BarChart3 className="h-5 w-5 text-neutral-400 transition-transform group-open:rotate-180" />
               </summary>
               <div className="mt-3 text-neutral-600">
                 Completion, trends across pillars, and streaks to reinforce momentum without pressure.
               </div>
             </details>
-
             <details className="group rounded-lg border border-neutral-200 bg-white p-5 [&_summary::-webkit-details-marker]:hidden">
               <summary className="flex cursor-pointer list-none items-center justify-between gap-4">
                 <span className="font-medium text-neutral-900">Is there human coaching?</span>
-                <Handshake className="h-5 w-5 text-neutral-400 transition-transform group-open:rotate-180" />
               </summary>
               <div className="mt-3 text-neutral-600">
                 Yes, you can integrate human coaching for accountability and depth alongside AI guidance.
               </div>
             </details>
-
             <details className="group rounded-lg border border-neutral-200 bg-white p-5 [&_summary::-webkit-details-marker]:hidden">
               <summary className="flex cursor-pointer list-none items-center justify-between gap-4">
                 <span className="font-medium text-neutral-900">Which platforms and integrations are supported?</span>
-                <Users className="h-5 w-5 text-neutral-400 transition-transform group-open:rotate-180" />
               </summary>
               <div className="mt-3 text-neutral-600">
                 Start with Garmin integration for biometrics, with more platforms planned. Peer features and groups are in active development.

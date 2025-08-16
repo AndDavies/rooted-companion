@@ -155,7 +155,7 @@ export default function PlanningActions({
           onClick={handleGeneratePlan}
           disabled={isLoading}
           size="lg"
-          className="bg-green-600 hover:bg-green-700 text-white"
+          className="bg-sage-600 hover:bg-sage-700 text-white shadow-lg hover:shadow-xl transition-all duration-200"
         >
           {isLoading ? (
             <>
@@ -185,7 +185,7 @@ export default function PlanningActions({
           onClick={handleGeneratePlan}
           disabled={isLoading}
           variant="outline"
-          className="border-green-600 text-green-600 hover:bg-green-50"
+          className="border-sage-600 text-sage-600 hover:bg-sage-50"
         >
           {isLoading ? (
             <>
@@ -210,10 +210,10 @@ export default function PlanningActions({
         onClick={handleMarkComplete}
         disabled={isLoading || isCompleted}
         className={`
-          transition-all duration-200
+          transition-all duration-200 shadow-lg hover:shadow-xl
           ${isCompleted 
-            ? 'bg-green-600 text-white' 
-            : 'bg-blue-600 hover:bg-blue-700 text-white'
+            ? 'bg-sage-600 text-white' 
+            : 'bg-sky-600 hover:bg-sky-700 text-white'
           }
         `}
       >
@@ -254,10 +254,10 @@ export default function PlanningActions({
           disabled={isSavingReflection || reflectionSaved || reflectionText.trim() === currentReflection}
           size="sm"
           className={`
-            transition-all duration-200
+            transition-all duration-200 shadow-lg hover:shadow-xl
             ${reflectionSaved 
-              ? 'bg-green-600 text-white' 
-              : 'bg-blue-600 hover:bg-blue-700 text-white'
+              ? 'bg-sage-600 text-white' 
+              : 'bg-sky-600 hover:bg-sky-700 text-white'
             }
           `}
         >

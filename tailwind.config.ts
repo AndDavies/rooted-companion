@@ -45,6 +45,19 @@ const config: Config = {
           tan: '#d97706', // Custom tan accent
           gold: '#f59e0b', // Custom gold accent
         },
+        // Wellness theme colors
+        sage: {
+          50: '#f0f9f4',
+          100: '#dcf3e8',
+          200: '#bce5d1',
+          300: '#8dd2b0',
+          400: '#56b688',
+          500: '#339967',
+          600: '#257d52',
+          700: '#1f6442',
+          800: '#1c5037',
+          900: '#18412e',
+        },
         destructive: {
           DEFAULT: 'hsl(var(--destructive))',
           foreground: 'hsl(var(--destructive-foreground))',
